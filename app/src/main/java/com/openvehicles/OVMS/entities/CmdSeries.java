@@ -102,7 +102,7 @@ public class CmdSeries implements OnResultCommandListener {
 	}
 
 	public CmdSeries(ApiService pService, Listener pListener) {
-		this(BaseApp.getApp(), pService, pListener);
+		this(BaseApp.Companion.getApp(), pService, pListener);
 	}
 
 

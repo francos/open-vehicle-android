@@ -123,7 +123,7 @@ public class LogsData {
 	// System environment:
 	//
 
-	private transient static final Context context = BaseApp.getApp();
+	private transient static final Context context = BaseApp.Companion.getApp();
 	private transient static final Gson gson = new Gson();
 
 

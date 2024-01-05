@@ -24,7 +24,7 @@ public class CarsStorage {
 	private static final String TAG = "CarsStorage";
 
 	private static CarsStorage sInstance;
-	private final Context mContext = BaseApp.getApp();
+	private final Context mContext = BaseApp.Companion.getApp();
 	private ArrayList<CarData> mStoredCars;
 	private String mLastSelectedCarId;
 	private SharedPreferences mPreferences;	

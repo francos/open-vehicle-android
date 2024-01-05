@@ -4,8 +4,8 @@ import android.content.Context;
 import android.os.Bundle;
 import android.util.Log;
 
-import com.openvehicles.OVMS.luttu.AppPrefes;
 import com.openvehicles.OVMS.BaseApp;
+import com.openvehicles.OVMS.luttu.AppPrefes;
 import com.openvehicles.OVMS.R;
 
 import java.io.Serializable;
@@ -295,7 +295,7 @@ public class CarData implements Serializable {
 	private void Init() {
 		// get Application Context and Preferences access:
 		if (mContext == null)
-			mContext = BaseApp.getContext();
+			mContext = BaseApp.Companion.getContext();
 		if (appPrefes == null)
 			appPrefes = new AppPrefes(mContext, "ovms");
 		if (decimalFormat1 == null)
