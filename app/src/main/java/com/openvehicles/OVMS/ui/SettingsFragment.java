@@ -1,11 +1,12 @@
 package com.openvehicles.OVMS.ui;
 
-import java.util.ArrayList;
-
 import android.content.Context;
 import android.content.res.Configuration;
 import android.os.Bundle;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
@@ -17,10 +18,6 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
-
 import com.openvehicles.OVMS.R;
 import com.openvehicles.OVMS.api.ApiService;
 import com.openvehicles.OVMS.entities.CarData;
@@ -30,6 +27,8 @@ import com.openvehicles.OVMS.ui.settings.ControlFragment;
 import com.openvehicles.OVMS.ui.settings.GlobalOptionsFragment;
 import com.openvehicles.OVMS.ui.utils.Ui;
 import com.openvehicles.OVMS.utils.CarsStorage;
+
+import java.util.ArrayList;
 
 public class SettingsFragment extends BaseFragment implements
 		OnItemClickListener {

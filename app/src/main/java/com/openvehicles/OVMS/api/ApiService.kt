@@ -36,7 +36,6 @@ import com.openvehicles.OVMS.utils.CarsStorage
 import com.openvehicles.OVMS.utils.Sys
 import java.io.Serializable
 import java.lang.reflect.Array
-import kotlin.concurrent.Volatile
 
 class ApiService : Service(), ApiTask.ApiTaskListener, ApiObserver {
 
@@ -485,7 +484,7 @@ class ApiService : Service(), ApiTask.ApiTaskListener, ApiObserver {
 
     override fun onPushNotification(msgClass: Char, msgText: String?) {
         // This callback only receives MP push notifications for the currently selected vehicle.
-        // See MyGcmListenerService for system notification broadcasting.
+        // See MyFirebaseMessagingService for system notification broadcasting.
     }
 
     // ApiObserver interface:

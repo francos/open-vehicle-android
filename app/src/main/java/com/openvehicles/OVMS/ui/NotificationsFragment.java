@@ -31,11 +31,15 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.openvehicles.OVMS.api.ApiService;
-import com.openvehicles.OVMS.luttu.AppPrefes;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+
 import com.openvehicles.OVMS.R;
+import com.openvehicles.OVMS.api.ApiService;
 import com.openvehicles.OVMS.api.OnResultCommandListener;
 import com.openvehicles.OVMS.entities.CarData;
+import com.openvehicles.OVMS.luttu.AppPrefes;
 import com.openvehicles.OVMS.ui.settings.StoredCommandFragment;
 import com.openvehicles.OVMS.ui.utils.Ui;
 import com.openvehicles.OVMS.utils.CarsStorage;
@@ -43,10 +47,6 @@ import com.openvehicles.OVMS.utils.NotificationData;
 import com.openvehicles.OVMS.utils.OVMSNotifications;
 
 import java.text.SimpleDateFormat;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
 
 
 public class NotificationsFragment extends BaseFragment

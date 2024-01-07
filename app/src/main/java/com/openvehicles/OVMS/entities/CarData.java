@@ -5,8 +5,8 @@ import android.os.Bundle;
 import android.util.Log;
 
 import com.openvehicles.OVMS.BaseApp;
-import com.openvehicles.OVMS.luttu.AppPrefes;
 import com.openvehicles.OVMS.R;
+import com.openvehicles.OVMS.luttu.AppPrefes;
 
 import java.io.Serializable;
 import java.text.DecimalFormat;

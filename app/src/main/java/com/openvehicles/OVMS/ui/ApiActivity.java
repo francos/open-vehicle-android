@@ -6,15 +6,15 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.util.Log;
 
 import androidx.appcompat.app.AppCompatActivity;
-import android.util.Log;
 
 import com.openvehicles.OVMS.api.ApiObservable;
 import com.openvehicles.OVMS.api.ApiObserver;
 import com.openvehicles.OVMS.api.ApiService;
-import com.openvehicles.OVMS.luttu.AppPrefes;
 import com.openvehicles.OVMS.entities.CarData;
+import com.openvehicles.OVMS.luttu.AppPrefes;
 import com.openvehicles.OVMS.ui.utils.Database;
 import com.openvehicles.OVMS.utils.CarsStorage;
 
@@ -114,6 +114,13 @@ public class ApiActivity extends AppCompatActivity implements ApiObserver {
 
 	public boolean isLoggedIn() {
 		return (mApiService != null && mApiService.isLoggedIn());
+	}
+
+	public CarData getLoggedInCar() { return (isLoggedIn() ? mApiService.getCarData() : null); }
+
+	public boolean isLoggedIn(String vehicleId) {
+		CarData carData = getLoggedInCar();
+		return (carData != null && carData.sel_vehicleid.equals(vehicleId));
 	}
 
 	public boolean changeCar(String pVehicleId) {

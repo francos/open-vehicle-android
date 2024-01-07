@@ -1,13 +1,5 @@
 package com.openvehicles.OVMS.utils;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.InputStreamReader;
-import java.io.ObjectInputStream;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
@@ -19,6 +11,14 @@ import com.google.gson.reflect.TypeToken;
 import com.openvehicles.OVMS.BaseApp;
 import com.openvehicles.OVMS.R;
 import com.openvehicles.OVMS.entities.CarData;
+
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
 
 public class CarsStorage {
 	private static final String TAG = "CarsStorage";

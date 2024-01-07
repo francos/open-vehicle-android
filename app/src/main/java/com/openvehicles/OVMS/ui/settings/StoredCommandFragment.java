@@ -18,19 +18,6 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.Toast;
 
-import com.openvehicles.OVMS.api.CommandActivity;
-import com.openvehicles.OVMS.luttu.AppPrefes;
-import com.openvehicles.OVMS.R;
-import com.openvehicles.OVMS.entities.StoredCommand;
-import com.openvehicles.OVMS.ui.BaseFragment;
-import com.openvehicles.OVMS.ui.BaseFragmentActivity;
-import com.openvehicles.OVMS.ui.utils.Database;
-import com.openvehicles.OVMS.ui.utils.Ui;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -39,6 +26,19 @@ import androidx.core.content.pm.ShortcutManagerCompat;
 import androidx.core.content.res.ResourcesCompat;
 import androidx.core.graphics.drawable.IconCompat;
 import androidx.fragment.app.FragmentActivity;
+
+import com.openvehicles.OVMS.R;
+import com.openvehicles.OVMS.api.CommandActivity;
+import com.openvehicles.OVMS.entities.StoredCommand;
+import com.openvehicles.OVMS.luttu.AppPrefes;
+import com.openvehicles.OVMS.ui.BaseFragment;
+import com.openvehicles.OVMS.ui.BaseFragmentActivity;
+import com.openvehicles.OVMS.ui.utils.Database;
+import com.openvehicles.OVMS.ui.utils.Ui;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 
 /**
