@@ -12,10 +12,10 @@ import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
 
-import com.openvehicles.OVMS.luttu.AppPrefes;
 import com.openvehicles.OVMS.api.ApiObservable;
 import com.openvehicles.OVMS.api.ApiObserver;
 import com.openvehicles.OVMS.api.ApiService;
+import com.openvehicles.OVMS.luttu.AppPrefes;
 import com.openvehicles.OVMS.api.OnResultCommandListener;
 import com.openvehicles.OVMS.entities.CarData;
 import com.openvehicles.OVMS.ui.utils.Database;
@@ -100,7 +100,7 @@ public class BaseFragment extends Fragment implements ApiObserver {
 		if (mProgressOverlay != null && mProgressShowOnStart)
 			mProgressOverlay.show();
 
-		ApiObservable.get().addObserver(this);
+		ApiObservable.INSTANCE.addObserver(this);
 		ApiService service = getService();
 		if (service != null) {
 			onServiceAvailable(service);
@@ -116,25 +116,25 @@ public class BaseFragment extends Fragment implements ApiObserver {
 
 		cancelCommand();
 
-		ApiObservable.get().deleteObserver(this);
+		ApiObservable.INSTANCE.deleteObserver(this);
 
 		if (mProgressOverlay != null)
 			mProgressOverlay.hide();
 	}
 
 	@Override
-	public void update(CarData pCarData) {
+	public void update(CarData carData) {
 		// Override as needed
 	}
 
 	@Override
-	public void onServiceAvailable(ApiService pService) {
+	public void onServiceAvailable(ApiService service) {
 		// Override as needed, default:
-		update(pService.getCarData());
+		update(service.getCarData());
 	}
 
 	@Override
-	public void onServiceLoggedIn(ApiService pService, boolean pIsLoggedIn) {
+	public void onServiceLoggedIn(ApiService service, boolean isLoggedIn) {
 		// Override as needed
 	}
 

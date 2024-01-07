@@ -173,13 +173,13 @@ public class CellularStatsFragment extends BaseFragment implements OnResultComma
 
 
 	@Override
-	public void onServiceAvailable(ApiService pService) {
-		mService = pService;
+	public void onServiceAvailable(ApiService service) {
+		mService = service;
 	}
 
 
 	@Override
-	public void update(CarData pCarData) {
+	public void update(CarData carData) {
 		// called after login / if new data is available
 		requestData();
 	}

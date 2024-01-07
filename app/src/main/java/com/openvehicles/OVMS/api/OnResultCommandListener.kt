@@ -1,5 +1,7 @@
-package com.openvehicles.OVMS.api;
+package com.openvehicles.OVMS.api
 
-public interface OnResultCommandListener {
-	public void onResultCommand(String[] result);
+interface OnResultCommandListener {
+
+    fun onResultCommand(result: Array<String>)
+
 }

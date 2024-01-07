@@ -43,7 +43,7 @@ public class CarGroupFragment
 	}
 	
 	@Override
-	public void onServiceAvailable(ApiService pService) {
+	public void onServiceAvailable(ApiService service) {
 		// nop
 	}
 	

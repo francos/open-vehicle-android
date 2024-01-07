@@ -8,8 +8,8 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 
-import com.openvehicles.OVMS.luttu.AppPrefes;
 import com.openvehicles.OVMS.api.ApiService;
+import com.openvehicles.OVMS.luttu.AppPrefes;
 
 /**
  * ApiWidget: use this as the base class for an application widget

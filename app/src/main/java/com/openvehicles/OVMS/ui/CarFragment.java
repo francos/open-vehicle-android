@@ -216,11 +216,11 @@ public class CarFragment extends BaseFragment implements OnClickListener, OnResu
 
 
 	@Override
-	public void update(CarData pCarData) {
-		mCarData = pCarData;
-		setupCarType(pCarData);
-		updateLastUpdatedView(pCarData);
-		updateCarBodyView(pCarData);
+	public void update(CarData carData) {
+		mCarData = carData;
+		setupCarType(carData);
+		updateLastUpdatedView(carData);
+		updateCarBodyView(carData);
 	}
 
 	@Override

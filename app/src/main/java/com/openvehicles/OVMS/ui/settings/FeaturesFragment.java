@@ -64,13 +64,13 @@ public class FeaturesFragment extends BaseFragment implements OnResultCommandLis
 	}
 
 	@Override
-	public void onServiceAvailable(ApiService pService) {
-		mService = pService;
+	public void onServiceAvailable(ApiService service) {
+		mService = service;
 		requestData();
 	}
 
 	@Override
-	public void update(CarData pCarData) {
+	public void update(CarData carData) {
 	}
 
 	private void requestData() {

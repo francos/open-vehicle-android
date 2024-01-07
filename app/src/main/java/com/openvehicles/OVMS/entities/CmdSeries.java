@@ -246,7 +246,7 @@ public class CmdSeries implements OnResultCommandListener {
 		Log.v(TAG, "onResult: " + cmd.message + " / key=" + cmd.commandCode
 				+ " => returnCode=" + cmd.returnCode);
 
-		if (ApiService.hasMultiRowResponse(commandCode)) {
+		if (ApiService.Companion.hasMultiRowResponse(commandCode)) {
 			// multiple result command:
 
 			if (returnText.equals("No historical data available")) {
@@ -346,6 +346,5 @@ public class CmdSeries implements OnResultCommandListener {
 		else
 			return "";
 	}
-
 
 }

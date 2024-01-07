@@ -41,10 +41,10 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 
 import com.google.android.gms.maps.model.LatLng;
+import com.openvehicles.OVMS.api.ApiService;
 import com.openvehicles.OVMS.luttu.AppPrefes;
 
 import com.openvehicles.OVMS.R;
-import com.openvehicles.OVMS.api.ApiService;
 import com.openvehicles.OVMS.entities.CarData;
 import com.openvehicles.OVMS.receiver.RegistrationIntentService;
 import com.openvehicles.OVMS.ui.FragMap.UpdateLocation;
@@ -365,7 +365,6 @@ public class MainActivity extends ApiActivity implements
 	 */
 
 	private void gcmStartRegistration() {
-
 		ApiService service = getService();
 		if (service == null)
 			return;

@@ -57,13 +57,13 @@ public class ControlParametersFragment extends BaseFragment implements OnResultC
 	}
 
 	@Override
-	public void onServiceAvailable(ApiService pService) {
-		mService = pService;
+	public void onServiceAvailable(ApiService service) {
+		mService = service;
 		requestData();
 	}
 
 	@Override
-	public void update(CarData pCarData) {
+	public void update(CarData carData) {
 	}
 
 	private void requestData() {

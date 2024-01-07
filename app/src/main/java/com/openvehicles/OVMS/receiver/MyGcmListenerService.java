@@ -17,9 +17,9 @@ import android.util.Log;
 
 import com.google.android.gms.gcm.GcmListenerService;
 
+import com.openvehicles.OVMS.api.ApiService;
 import com.openvehicles.OVMS.luttu.AppPrefes;
 import com.openvehicles.OVMS.R;
-import com.openvehicles.OVMS.api.ApiService;
 import com.openvehicles.OVMS.entities.CarData;
 import com.openvehicles.OVMS.ui.MainActivity;
 import com.openvehicles.OVMS.ui.utils.Ui;
@@ -124,7 +124,7 @@ public class MyGcmListenerService extends GcmListenerService {
 				intent.putExtra("msg_notify_text", contentText);
 				intent.putExtra("msg_notify_time", timeFormat.format(timeStamp));
 				sendBroadcast(intent);
-				ApiService.sendKustomBroadcast(this, intent);
+				ApiService.Companion.sendKustomBroadcast(this, intent);
 
 				ui_notified = true;
 			}

@@ -209,7 +209,7 @@ public class InfoFragment extends BaseFragment implements OnClickListener,
 
 
 	@Override
-	public void update(CarData pCarData) {
+	public void update(CarData carData) {
 
 		// while mCarChanger is defined, updates are inhibited to avoid
 		// interference from scripts or incoming updates during interaction
@@ -219,12 +219,12 @@ public class InfoFragment extends BaseFragment implements OnClickListener,
 		}
 
 		// store pointer to new car:
-		mCarData = pCarData;
+		mCarData = carData;
 
 		// update UI:
 		getCompatActivity().invalidateOptionsMenu();
-		updateLastUpdatedView(pCarData);
-		updateCarInfoView(pCarData);
+		updateLastUpdatedView(carData);
+		updateCarInfoView(carData);
 		updateChargeAlerts();
 	}
 

@@ -14,9 +14,9 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
+import com.openvehicles.OVMS.api.ApiService;
 import com.openvehicles.OVMS.luttu.AppPrefes;
 import com.openvehicles.OVMS.R;
-import com.openvehicles.OVMS.api.ApiService;
 import com.openvehicles.OVMS.ui.BaseFragment;
 import com.openvehicles.OVMS.ui.utils.Ui;
 import com.openvehicles.OVMS.utils.Sys;

@@ -31,9 +31,9 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.openvehicles.OVMS.api.ApiService;
 import com.openvehicles.OVMS.luttu.AppPrefes;
 import com.openvehicles.OVMS.R;
-import com.openvehicles.OVMS.api.ApiService;
 import com.openvehicles.OVMS.api.OnResultCommandListener;
 import com.openvehicles.OVMS.entities.CarData;
 import com.openvehicles.OVMS.ui.settings.StoredCommandFragment;
@@ -273,11 +273,11 @@ public class NotificationsFragment extends BaseFragment
 	}
 
 	@Override
-	public void update(CarData pCarData) {
-		super.update(pCarData);
+	public void update(CarData carData) {
+		super.update(carData);
 
 		// check if the car filter needs to be reapplied:
-		if (mFilterList && !pCarData.sel_vehicleid.equals(mVehicleId)) {
+		if (mFilterList && !carData.sel_vehicleid.equals(mVehicleId)) {
 			String vehicleId = CarsStorage.get().getLastSelectedCarId();
 			if (vehicleId != null && !vehicleId.equals(mVehicleId)) {
 				Log.d(TAG, "update: vehicle changed to '" + vehicleId + "' => filter reload");
@@ -345,7 +345,7 @@ public class NotificationsFragment extends BaseFragment
 		updateList();
 
 		// Send command:
-		String mpCmd = ApiService.makeMsgCommand(userCmd);
+		String mpCmd = ApiService.Companion.makeMsgCommand(userCmd);
 		String[] cp = mpCmd.split(",");
 		try {
 			lastCommandSent = Integer.parseInt(cp[0]);

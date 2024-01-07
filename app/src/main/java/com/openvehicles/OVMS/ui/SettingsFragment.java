@@ -71,10 +71,10 @@ public class SettingsFragment extends BaseFragment implements
 	}
 
 	@Override
-	public void update(CarData pCarData) {
+	public void update(CarData carData) {
 		int count = mListView.getCount();
 		for (int i = 0; i < count; i++) {
-			if (pCarData == mListView.getItemAtPosition(i)) {
+			if (carData == mListView.getItemAtPosition(i)) {
 				mListView.setItemChecked(i, true);
 				break;
 			}
@@ -83,9 +83,10 @@ public class SettingsFragment extends BaseFragment implements
 	}
 
 	@Override
-	public void onServiceAvailable(ApiService pService) {
-		if (pService.isLoggedIn())
-			update(pService.getCarData());
+	public void onServiceAvailable(ApiService service) {
+		if (service.isLoggedIn()) {
+			update(service.getCarData());
+		}
 	}
 
 	@Override

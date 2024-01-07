@@ -10,17 +10,15 @@ import android.os.IBinder;
 import androidx.appcompat.app.AppCompatActivity;
 import android.util.Log;
 
-import com.openvehicles.OVMS.luttu.AppPrefes;
 import com.openvehicles.OVMS.api.ApiObservable;
 import com.openvehicles.OVMS.api.ApiObserver;
 import com.openvehicles.OVMS.api.ApiService;
-import com.openvehicles.OVMS.api.ApiService.ApiBinder;
+import com.openvehicles.OVMS.luttu.AppPrefes;
 import com.openvehicles.OVMS.entities.CarData;
 import com.openvehicles.OVMS.ui.utils.Database;
 import com.openvehicles.OVMS.utils.CarsStorage;
 
-public class ApiActivity extends AppCompatActivity
-	implements ApiObserver {
+public class ApiActivity extends AppCompatActivity implements ApiObserver {
 	private static final String TAG = "ApiActivity";
 
 	protected ApiService mApiService;
@@ -49,13 +47,13 @@ public class ApiActivity extends AppCompatActivity
 		if (mApiService != null) {
 			mApiService.onActivityStart();
 		}
-		ApiObservable.get().addObserver(this);
+		ApiObservable.INSTANCE.addObserver(this);
 	}
 
 	@Override
 	protected void onStop() {
 		Log.d(TAG, "onStop");
-		ApiObservable.get().deleteObserver(this);
+		ApiObservable.INSTANCE.deleteObserver(this);
 		if (mApiService != null) {
 			mApiService.onActivityStop();
 		}
@@ -79,9 +77,9 @@ public class ApiActivity extends AppCompatActivity
         @Override
         public void onServiceConnected(ComponentName className, IBinder service) {
 			Log.d(TAG, "service connected");
-            ApiBinder binder = (ApiBinder) service;
+            ApiService.ApiBinder binder = (ApiService.ApiBinder) service;
             mApiService = binder.getService();
-            ApiObservable.get().notifyOnBind(mApiService);
+            ApiObservable.INSTANCE.notifyOnBind(mApiService);
         }
 
         @Override
@@ -92,17 +90,17 @@ public class ApiActivity extends AppCompatActivity
     };
 
 	@Override
-	public void update(CarData pCarData) {
+	public void update(CarData carData) {
 		// Override as needed
 	}
 
 	@Override
-	public void onServiceAvailable(ApiService pService) {
+	public void onServiceAvailable(ApiService service) {
 		// Override as needed
 	}
 
 	@Override
-	public void onServiceLoggedIn(ApiService pService, boolean pIsLoggedIn) {
+	public void onServiceLoggedIn(ApiService service, boolean isLoggedIn) {
 		// Override as needed
 	}
 

@@ -484,8 +484,8 @@ public class FragMap extends BaseFragment implements OnInfoWindowClickListener,
 
 
 	@Override
-	public void update(CarData pCarData) {
-		mCarData = pCarData;
+	public void update(CarData carData) {
+		mCarData = carData;
 		update();
 	}
 
