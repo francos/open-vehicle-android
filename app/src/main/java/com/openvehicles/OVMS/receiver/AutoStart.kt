@@ -1,32 +1,32 @@
-package com.openvehicles.OVMS.receiver;
+package com.openvehicles.OVMS.receiver
 
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.util.Log;
-
-import com.openvehicles.OVMS.api.ApiService;
-import com.openvehicles.OVMS.luttu.AppPrefes;
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.util.Log
+import com.openvehicles.OVMS.api.ApiService
+import com.openvehicles.OVMS.luttu.AppPrefes
 
 /**
  * Created by balzer on 04.12.16.
  */
+class AutoStart : BroadcastReceiver() {
 
-public class AutoStart extends BroadcastReceiver {
+    override fun onReceive(context: Context, intent: Intent) {
+        val appPrefes = AppPrefes(context, "ovms")
+        val serviceEnabled = appPrefes.getData("option_service_enabled", "0") == "1"
+        if (serviceEnabled) {
+            Log.i(TAG, "Starting ApiService")
+            try {
+                context.startService(Intent(context, ApiService::class.java))
+            } catch (e: Exception) {
+                Log.e(TAG, "Can't start ApiService: ERROR", e)
+            }
+        }
+    }
 
-	private static final String TAG = "AutoStart";
+    companion object {
 
-	@Override
-	public void onReceive(Context context, Intent intent) {
-		AppPrefes appPrefes = new AppPrefes(context, "ovms");
-		boolean serviceEnabled = appPrefes.getData("option_service_enabled", "0").equals("1");
-		if (serviceEnabled) {
-			Log.i(TAG, "Starting ApiService");
-			try {
-				context.startService(new Intent(context, ApiService.class));
-			} catch(Exception e) {
-				Log.e(TAG, "Can't start ApiService: ERROR", e);
-			}
-		}
-	}
+        private const val TAG = "AutoStart"
+    }
 }
