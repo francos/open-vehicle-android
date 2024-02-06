@@ -499,7 +499,7 @@ class ApiService : Service(), ApiTask.ApiTaskListener, ApiObserver {
             intent.putExtra("sel_server", this.carData!!.sel_server)
             intent.putExtra("sel_vehicleid", this.carData!!.sel_vehicleid)
             intent.putExtra("sel_vehicle_label", this.carData!!.sel_vehicle_label)
-            intent.putExtras(this.carData!!.broadcastData)
+            intent.putExtras(this.carData!!.getBroadcastData())
             sendBroadcast(intent)
             sendKustomBroadcast(this, intent)
         }

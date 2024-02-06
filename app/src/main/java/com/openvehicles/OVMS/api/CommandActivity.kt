@@ -293,7 +293,7 @@ class CommandActivity : ApiActivity(), CmdSeries.Listener {
 
             // Start command:
             cmdSeries = CmdSeries(this, mApiService, this)
-            cmdSeries!!.add(title, msgCommand)
+            cmdSeries!!.add(title, msgCommand!!)
             cmdSeries!!.start()
             val command = if (msgCommandCode == 7) {
                 this.command
@@ -321,7 +321,7 @@ class CommandActivity : ApiActivity(), CmdSeries.Listener {
 
         // Failure?
         if (returnCode != ApiService.COMMAND_RESULT_OK) {
-            val errorDetail = this.cmdSeries!!.errorDetail
+            val errorDetail = this.cmdSeries!!.getErrorDetail()
             when (returnCode) {
                 ApiService.COMMAND_RESULT_FAILED -> if (!errorDetail.isEmpty()) text.append(
                     getString(R.string.err_failed, errorDetail)

@@ -187,7 +187,7 @@ class InfoWidget : ApiWidget<InfoWidget>(InfoWidget::class.java) {
             paint.textSize = 7 * dps
             paint.color = textColorUpdate
             canvas.drawText("OFFLINE", 95 * dps, 8 * dps, paint)
-        } else if (carData.car_lastupdated != null && System.currentTimeMillis() - carData.car_lastupdated.time > 120 * 1000) {
+        } else if (carData.car_lastupdated != null && System.currentTimeMillis() - carData.car_lastupdated!!.time > 120 * 1000) {
             val isoTime = SimpleDateFormat("HH:mm")
             val textLastUpdate = isoTime.format(carData.car_lastupdated)
             paint.textAlign = Paint.Align.RIGHT

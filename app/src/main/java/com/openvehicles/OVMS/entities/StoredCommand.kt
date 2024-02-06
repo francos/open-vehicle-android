@@ -1,34 +1,24 @@
-package com.openvehicles.OVMS.entities;
+package com.openvehicles.OVMS.entities
 
-import androidx.annotation.Nullable;
+class StoredCommand(
 
-public class StoredCommand
-	implements Comparable<StoredCommand> {
+    @JvmField var mKey: Long,
+    @JvmField var mTitle: String,
+    @JvmField var mCommand: String
 
-	public long mKey;
-	public String mTitle;
-	public String mCommand;
+) : Comparable<StoredCommand> {
 
-	public StoredCommand(long pKey, String pTitle, String pCommand) {
-		this.mKey = pKey;
-		this.mTitle = pTitle;
-		this.mCommand = pCommand;
-	}
-	public StoredCommand(String pTitle, String pCommand) {
-		this(0, pTitle, pCommand);
-	}
+    constructor(pTitle: String, pCommand: String) : this(0, pTitle, pCommand)
 
-	@Override
-	public int compareTo(StoredCommand o) {
-		return mTitle.compareToIgnoreCase(o.mTitle);
-	}
+    override fun compareTo(other: StoredCommand): Int {
+        return mTitle.compareTo(other.mTitle, ignoreCase = true)
+    }
 
-	@Override
-	public boolean equals(@Nullable Object obj) {
-		if (obj instanceof StoredCommand) {
-			return (((StoredCommand)obj).mKey == this.mKey);
-		} else {
-			return false;
-		}
-	}
+    override fun equals(other: Any?): Boolean {
+        return if (other is StoredCommand) {
+            other.mKey == mKey
+        } else {
+            false
+        }
+    }
 }
