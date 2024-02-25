@@ -12,7 +12,7 @@ import com.google.firebase.messaging.RemoteMessage
 import com.openvehicles.OVMS.R
 import com.openvehicles.OVMS.api.ApiService
 import com.openvehicles.OVMS.api.ApiService.Companion.sendKustomBroadcast
-import com.openvehicles.OVMS.luttu.AppPrefes
+import com.openvehicles.OVMS.utils.AppPrefes
 import com.openvehicles.OVMS.ui.MainActivity
 import com.openvehicles.OVMS.ui.utils.Ui
 import com.openvehicles.OVMS.utils.CarsStorage

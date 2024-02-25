@@ -29,7 +29,7 @@ import com.openvehicles.OVMS.api.ApiObservable.deleteObserver
 import com.openvehicles.OVMS.api.ApiObservable.notifyLoggedIn
 import com.openvehicles.OVMS.api.ApiObservable.notifyUpdate
 import com.openvehicles.OVMS.entities.CarData
-import com.openvehicles.OVMS.luttu.AppPrefes
+import com.openvehicles.OVMS.utils.AppPrefes
 import com.openvehicles.OVMS.ui.MainActivity
 import com.openvehicles.OVMS.ui.utils.Database
 import com.openvehicles.OVMS.utils.CarsStorage

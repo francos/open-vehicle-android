@@ -25,7 +25,7 @@ import com.openvehicles.OVMS.R;
 import com.openvehicles.OVMS.api.OnResultCommandListener;
 import com.openvehicles.OVMS.entities.CarData;
 import com.openvehicles.OVMS.entities.CarData.DataStale;
-import com.openvehicles.OVMS.luttu.AppPrefes;
+import com.openvehicles.OVMS.utils.AppPrefes;
 import com.openvehicles.OVMS.ui.settings.CarInfoFragment;
 import com.openvehicles.OVMS.ui.settings.FeaturesFragment;
 import com.openvehicles.OVMS.ui.settings.GlobalOptionsFragment;
@@ -196,12 +196,12 @@ public class CarFragment extends BaseFragment implements OnClickListener, OnResu
 					Configuration.ORIENTATION_UNDEFINED);
 			return true;
 		} else if (menuId == R.id.mi_show_fahrenheit) {
-			appPrefes.SaveData("showfahrenheit", newState ? "on" : "off");
+			appPrefes.saveData("showfahrenheit", newState ? "on" : "off");
 			item.setChecked(newState);
 			triggerCarDataUpdate();
 			return true;
 		} else if (menuId == R.id.mi_show_tpms_bar) {
-			appPrefes.SaveData("showtpmsbar", newState ? "on" : "off");
+			appPrefes.saveData("showtpmsbar", newState ? "on" : "off");
 			item.setChecked(newState);
 			triggerCarDataUpdate();
 			return true;

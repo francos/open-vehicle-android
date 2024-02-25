@@ -18,9 +18,8 @@ import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import com.openvehicles.OVMS.R
-import com.openvehicles.OVMS.entities.CarData
 import com.openvehicles.OVMS.entities.CmdSeries
-import com.openvehicles.OVMS.luttu.AppPrefes
+import com.openvehicles.OVMS.utils.AppPrefes
 import com.openvehicles.OVMS.ui.ApiActivity
 import com.openvehicles.OVMS.ui.utils.Database
 import com.openvehicles.OVMS.utils.CarsStorage

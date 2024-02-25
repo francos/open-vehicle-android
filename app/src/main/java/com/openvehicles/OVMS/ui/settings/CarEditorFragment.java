@@ -21,7 +21,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.Spinner;
 
-import com.openvehicles.OVMS.luttu.AppPrefes;
+import com.openvehicles.OVMS.utils.AppPrefes;
 import com.openvehicles.OVMS.R;
 import com.openvehicles.OVMS.entities.CarData;
 import com.openvehicles.OVMS.ui.BaseFragment;
@@ -236,7 +236,7 @@ public class CarEditorFragment extends BaseFragment {
 			// save selected vehicle label:
 			AppPrefes appPrefes = new AppPrefes(getActivity(), "ovms");
 			Log.d(TAG, "load: sel_vehicle_label=" + mCarData.sel_vehicle_label);
-			appPrefes.SaveData("sel_vehicle_label", mCarData.sel_vehicle_label);
+			appPrefes.saveData("sel_vehicle_label", mCarData.sel_vehicle_label);
 		}
 	}
 

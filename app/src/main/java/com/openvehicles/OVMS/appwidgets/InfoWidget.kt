@@ -13,7 +13,7 @@ import android.graphics.Typeface
 import android.widget.RemoteViews
 import com.openvehicles.OVMS.R
 import com.openvehicles.OVMS.entities.CarData
-import com.openvehicles.OVMS.luttu.AppPrefes
+import com.openvehicles.OVMS.utils.AppPrefes
 import com.openvehicles.OVMS.ui.MainActivity
 import com.openvehicles.OVMS.ui.utils.Ui
 import com.openvehicles.OVMS.utils.CarsStorage
@@ -44,14 +44,14 @@ class InfoWidget : ApiWidget<InfoWidget>(InfoWidget::class.java) {
      * @param appWidgetId - the ID of the widget to update
      */
     override fun updateWidget(
-        context: Context?,
+        context: Context,
         appWidgetManager: AppWidgetManager?,
         appWidgetId: Int
     ) {
         appPrefes = AppPrefes(context, "ovms")
 
         // Construct the RemoteViews object
-        val views = RemoteViews(context!!.packageName, R.layout.info_widget)
+        val views = RemoteViews(context.packageName, R.layout.info_widget)
 
         // Register click intent:
         val configIntent = Intent(context, MainActivity::class.java)

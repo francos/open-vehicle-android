@@ -1,51 +1,39 @@
 /**
- * 
+ *
  */
-package com.openvehicles.OVMS.luttu;
+package com.openvehicles.OVMS.utils
 
-
-import android.app.Activity;
-import android.content.Context;
-import android.content.SharedPreferences;
-import android.content.SharedPreferences.Editor;
+import android.app.Activity
+import android.content.Context
+import android.content.SharedPreferences
 
 /**
  * @author android
- * 
  */
-public class AppPrefes {
+class AppPrefes(
+    context: Context,
+    prefName: String?
+) {
 
-	private SharedPreferences appSharedPrefs;
-	private Editor prefsEditor;
+    private val appSharedPrefs: SharedPreferences = context.getSharedPreferences(prefName, Activity.MODE_PRIVATE)
+    private val prefsEditor: SharedPreferences.Editor = appSharedPrefs.edit()
 
-	public AppPrefes(Context context, String Preferncename) {
-		this.appSharedPrefs = context.getSharedPreferences(Preferncename,
-				Activity.MODE_PRIVATE);
-		this.prefsEditor = appSharedPrefs.edit();
-	}
+    /**
+     * Returns the value from the preference that matches [key].
+     */
+    fun getData(key: String?): String {
+        return appSharedPrefs.getString(key, "")!!
+    }
 
-	/****
-	 * 
-	 * getdata() get the value from the preference
-	 * 
-	 * */
-	public String getData(String key) {
-		return appSharedPrefs.getString(key, "");
-	}
+    fun getData(key: String?, defaultValue: String?): String? {
+        return appSharedPrefs.getString(key, defaultValue)
+    }
 
-	public String getData(String key, String defaultValue) {
-		return appSharedPrefs.getString(key, defaultValue);
-	}
-
-	/****
-	 * 
-	 * SaveData() save the value to the preference
-	 * 
-	 * */
-	public void SaveData(String Tag, String text) {
-		prefsEditor.putString(Tag, text);
-		prefsEditor.commit();
-	}
-
-	
+    /**
+     * Saves the value of the preference.
+     */
+    fun saveData(key: String?, text: String?) {
+        prefsEditor.putString(key, text)
+        prefsEditor.commit()
+    }
 }

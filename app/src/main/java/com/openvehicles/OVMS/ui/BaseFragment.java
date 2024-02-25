@@ -16,7 +16,7 @@ import com.openvehicles.OVMS.api.ApiObserver;
 import com.openvehicles.OVMS.api.ApiService;
 import com.openvehicles.OVMS.api.OnResultCommandListener;
 import com.openvehicles.OVMS.entities.CarData;
-import com.openvehicles.OVMS.luttu.AppPrefes;
+import com.openvehicles.OVMS.utils.AppPrefes;
 import com.openvehicles.OVMS.ui.utils.Database;
 import com.openvehicles.OVMS.ui.utils.ProgressOverlay;
 import com.openvehicles.OVMS.utils.CarsStorage;
@@ -206,9 +206,9 @@ public class BaseFragment extends Fragment implements ApiObserver {
 
 		// select car:
 		CarsStorage.INSTANCE.setSelectedCarId(pCarData.sel_vehicleid);
-		prefs.SaveData("sel_vehicle_label", pCarData.sel_vehicle_label);
-		prefs.SaveData("autotrack", "on");
-		prefs.SaveData("Id", database.getConnectionFilter(pCarData.sel_vehicle_label));
+		prefs.saveData("sel_vehicle_label", pCarData.sel_vehicle_label);
+		prefs.saveData("autotrack", "on");
+		prefs.saveData("Id", database.getConnectionFilter(pCarData.sel_vehicle_label));
 
 		// inform API service:
 		ApiService service = getService();

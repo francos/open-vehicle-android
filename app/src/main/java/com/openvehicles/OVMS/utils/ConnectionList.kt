@@ -11,9 +11,9 @@ import android.widget.ArrayAdapter
 import android.widget.ListView
 import androidx.appcompat.app.AppCompatDialog
 import com.openvehicles.OVMS.R
-import com.openvehicles.OVMS.luttu.AppPrefes
-import com.openvehicles.OVMS.luttu.Main
+import com.openvehicles.OVMS.Main
 import com.openvehicles.OVMS.ui.utils.Database
+import org.json.JSONArray
 
 class ConnectionList(
     context: Context,
@@ -89,7 +89,7 @@ class ConnectionList(
             }
             database.endWrite(true)
             database.close()
-            appPrefes.SaveData("Id", tid)
+            appPrefes.saveData("Id", tid)
             listener.onConnectionChanged(tid, title)
         }
         dialog.show()
@@ -189,7 +189,8 @@ class ConnectionList(
             try {
                 val url = "https://api.openchargemap.io/v2/referencedata/"
                 val jsonObject = main.getJSONObject(url)
-                val connectionTypes = jsonObject.getJSONArray("ConnectionTypes")
+                val connectionTypes = jsonObject?.getJSONArray("ConnectionTypes")
+                    ?: JSONArray()
                 for (i in 0 until connectionTypes.length()) {
                     val detail = connectionTypes.getJSONObject(i)
                     val hmap = HashMap<String, String>()

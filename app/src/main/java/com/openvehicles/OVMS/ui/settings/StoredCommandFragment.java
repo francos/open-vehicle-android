@@ -30,7 +30,7 @@ import androidx.fragment.app.FragmentActivity;
 import com.openvehicles.OVMS.R;
 import com.openvehicles.OVMS.api.CommandActivity;
 import com.openvehicles.OVMS.entities.StoredCommand;
-import com.openvehicles.OVMS.luttu.AppPrefes;
+import com.openvehicles.OVMS.utils.AppPrefes;
 import com.openvehicles.OVMS.ui.BaseFragment;
 import com.openvehicles.OVMS.ui.BaseFragmentActivity;
 import com.openvehicles.OVMS.ui.utils.Database;

@@ -3,9 +3,9 @@ package com.openvehicles.OVMS.entities
 import android.content.Context
 import android.os.Bundle
 import android.util.Log
-import com.openvehicles.OVMS.BaseApp.Companion.context
+import com.openvehicles.OVMS.BaseApp
 import com.openvehicles.OVMS.R
-import com.openvehicles.OVMS.luttu.AppPrefes
+import com.openvehicles.OVMS.utils.AppPrefes
 import java.io.Serializable
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
@@ -367,7 +367,7 @@ class CarData : Serializable {
     // Private (non serialization) data
     //
     @Transient
-    private var mContext: Context? = null
+    private var context: Context? = null
 
     @Transient
     private var appPrefes: AppPrefes? = null
@@ -386,9 +386,15 @@ class CarData : Serializable {
 
     private fun init() {
         // get Application Context and Preferences access:
-        if (mContext == null) mContext = context
-        if (appPrefes == null) appPrefes = AppPrefes(mContext, "ovms")
-        if (decimalFormat1 == null) decimalFormat1 = DecimalFormat("0.#")
+        if (context == null) {
+            context = BaseApp.context
+        }
+        if (appPrefes == null) {
+            appPrefes = AppPrefes(context!!, "ovms")
+        }
+        if (decimalFormat1 == null) {
+            decimalFormat1 = DecimalFormat("0.#")
+        }
     }
 
     /**
@@ -582,8 +588,8 @@ class CarData : Serializable {
                 car_distance_units_raw = dataParts[1]
                 car_distance_units = if (car_distance_units_raw.startsWith("M")) "mi" else "km"
                 car_speed_units =
-                    if (car_distance_units_raw.startsWith("M")) mContext!!.getText(R.string.mph)
-                        .toString() else mContext!!.getText(R.string.kph).toString()
+                    if (car_distance_units_raw.startsWith("M")) context!!.getText(R.string.mph)
+                        .toString() else context!!.getText(R.string.kph).toString()
                 car_charge_linevoltage_raw = dataParts[2].toFloat()
                 car_charge_linevoltage = String.format("%.1f%s", car_charge_linevoltage_raw, "V")
                 car_charge_current_raw = dataParts[3].toFloat()

@@ -36,7 +36,7 @@ import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 import com.github.mikephil.charting.listener.OnChartValueSelectedListener;
 import com.github.mikephil.charting.highlight.Highlight;
 import com.github.mikephil.charting.formatter.ValueFormatter;
-import com.openvehicles.OVMS.luttu.AppPrefes;
+import com.openvehicles.OVMS.utils.AppPrefes;
 import com.openvehicles.OVMS.R;
 import com.openvehicles.OVMS.entities.BatteryData;
 import com.openvehicles.OVMS.entities.CarData;
@@ -496,8 +496,8 @@ public class BatteryFragment
 	private void dataFilterChanged() {
 
 		// save prefs:
-		appPrefes.SaveData("battery_show_volt", mShowVolt ? "on" : "off");
-		appPrefes.SaveData("battery_show_temp", mShowTemp ? "on" : "off");
+		appPrefes.saveData("battery_show_volt", mShowVolt ? "on" : "off");
+		appPrefes.saveData("battery_show_temp", mShowTemp ? "on" : "off");
 
 		// check data status:
 		if (!isPackValid())

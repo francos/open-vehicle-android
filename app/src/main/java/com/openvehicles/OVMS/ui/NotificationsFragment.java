@@ -39,7 +39,7 @@ import com.openvehicles.OVMS.R;
 import com.openvehicles.OVMS.api.ApiService;
 import com.openvehicles.OVMS.api.OnResultCommandListener;
 import com.openvehicles.OVMS.entities.CarData;
-import com.openvehicles.OVMS.luttu.AppPrefes;
+import com.openvehicles.OVMS.utils.AppPrefes;
 import com.openvehicles.OVMS.ui.settings.StoredCommandFragment;
 import com.openvehicles.OVMS.ui.utils.Ui;
 import com.openvehicles.OVMS.utils.CarsStorage;
@@ -207,23 +207,23 @@ public class NotificationsFragment extends BaseFragment
 			return true;
 		} else if (menuId == R.id.mi_chk_filter_list) {
 			mFilterList = newState;
-			appPrefes.SaveData("notifications_filter_list", newState ? "on" : "off");
+			appPrefes.saveData("notifications_filter_list", newState ? "on" : "off");
 			item.setChecked(newState);
 			initList();
 			return true;
 		} else if (menuId == R.id.mi_chk_filter_info) {
 			mFilterInfo = newState;
-			appPrefes.SaveData("notifications_filter_info", newState ? "on" : "off");
+			appPrefes.saveData("notifications_filter_info", newState ? "on" : "off");
 			item.setChecked(newState);
 			return true;
 		} else if (menuId == R.id.mi_chk_filter_alert) {
 			mFilterAlert = newState;
-			appPrefes.SaveData("notifications_filter_alert", newState ? "on" : "off");
+			appPrefes.saveData("notifications_filter_alert", newState ? "on" : "off");
 			item.setChecked(newState);
 			return true;
 		} else if (menuId == R.id.mi_chk_monospace) {
 			mFontMonospace = newState;
-			appPrefes.SaveData("notifications_font_monospace", newState ? "on" : "off");
+			appPrefes.saveData("notifications_font_monospace", newState ? "on" : "off");
 			item.setChecked(newState);
 			mItemsAdapter.notifyDataSetChanged();
 			return true;
@@ -241,7 +241,7 @@ public class NotificationsFragment extends BaseFragment
 								val = 10;
 							}
 							mFontSize = val;
-							appPrefes.SaveData("notifications_font_size",
+							appPrefes.saveData("notifications_font_size",
 									Float.toString(mFontSize));
 							mItemsAdapter.notifyDataSetChanged();
 							mCmdInput.setTextSize(TypedValue.COMPLEX_UNIT_SP, mFontSize * 1.2f);
