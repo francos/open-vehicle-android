@@ -112,6 +112,7 @@ class AuxBatteryData {
         //
         // System environment:
         //
+
         @Transient
         private val context: Context? = app
 

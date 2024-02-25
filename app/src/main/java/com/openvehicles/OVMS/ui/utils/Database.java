@@ -602,16 +602,16 @@ public class Database extends SQLiteOpenHelper {
 		open();
 
 		ContentValues contentValues = new ContentValues();
-		contentValues.put("scTitle", cmd.mTitle);
-		contentValues.put("scCommand", cmd.mCommand);
+		contentValues.put("scTitle", cmd.title);
+		contentValues.put("scCommand", cmd.command);
 
 		long rowId;
-		if (cmd.mKey == 0) {
+		if (cmd.key == 0) {
 			rowId = db.insert("StoredCommand", null, contentValues);
 			if (rowId > 0)
-				cmd.mKey = rowId;
+				cmd.key = rowId;
 		} else {
-			contentValues.put("scKey", cmd.mKey);
+			contentValues.put("scKey", cmd.key);
 			rowId = db.replace("StoredCommand", null, contentValues);
 		}
 
@@ -622,8 +622,8 @@ public class Database extends SQLiteOpenHelper {
 		if (cmd == null) return false;
 		open();
 		int rows = 0;
-		if (cmd.mKey > 0) {
-			rows = db.delete("StoredCommand", "scKey=" + cmd.mKey, null);
+		if (cmd.key > 0) {
+			rows = db.delete("StoredCommand", "scKey=" + cmd.key, null);
 		}
 		return (rows > 0);
 	}

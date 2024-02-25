@@ -23,15 +23,15 @@ import com.openvehicles.OVMS.api.OnResultCommandListener
 class CmdSeries(
 
     private val context: Context?,
-    private val mService: ApiService?,
-    private val mListener: Listener?
+    private val service: ApiService?,
+    private val listener: Listener?
 
 ) : OnResultCommandListener {
 
     private val cmdList: ArrayList<Cmd> = ArrayList()
     private var current: Int = -1
 
-    constructor(pService: ApiService?, pListener: Listener?) : this(app, pService, pListener)
+    constructor(service: ApiService?, listener: Listener?) : this(app, service, listener)
 
     fun size(): Int {
         return cmdList.size
@@ -104,17 +104,17 @@ class CmdSeries(
      * The command position in the series is told to the listener as the main progress.
      */
     private fun executeNext() {
-        if (mService == null || !mService.isLoggedIn()) return
+        if (service == null || !service.isLoggedIn()) return
         val cmd = getNext()
         if (cmd != null) {
             // send next command:
             Log.v(TAG, "executeNext: " + cmd.message + ": cmd=" + cmd.command)
-            mListener?.onCmdSeriesProgress(cmd.message, cmd.pos(), cmd.posCnt(), 0, 0)
-            mService.sendCommand(cmd.command!!, this)
+            listener?.onCmdSeriesProgress(cmd.message, cmd.pos(), cmd.posCnt(), 0, 0)
+            service.sendCommand(cmd.command!!, this)
         } else {
             // series finished:
-            mService.cancelCommand(this)
-            mListener?.onCmdSeriesFinish(this, 0)
+            service.cancelCommand(this)
+            listener?.onCmdSeriesFinish(this, 0)
         }
     }
 
@@ -140,7 +140,7 @@ class CmdSeries(
         val cmd = getCurrent()
         if (cmd == null) {
             // we're not active, cancel subscription:
-            mService!!.cancelCommand(this)
+            service!!.cancelCommand(this)
             return
         } else if (cmd.commandCode != commandCode) {
             // not for us:
@@ -165,8 +165,8 @@ class CmdSeries(
                     TAG,
                     "ABORT: cmd failed: key=" + cmd.commandCode + " => returnCode=" + cmd.returnCode
                 )
-                mService!!.cancelCommand(this)
-                mListener?.onCmdSeriesFinish(this, returnCode)
+                service!!.cancelCommand(this)
+                listener?.onCmdSeriesFinish(this, returnCode)
             } else {
                 // success: check record count
                 var recNr = result[2].toInt()
@@ -177,7 +177,7 @@ class CmdSeries(
                     executeNext()
                 } else {
                     // update progress sub step:
-                    mListener?.onCmdSeriesProgress(
+                    listener?.onCmdSeriesProgress(
                         cmd.message,
                         cmd.pos(),
                         cmd.posCnt(),
@@ -192,8 +192,8 @@ class CmdSeries(
                 TAG,
                 "ABORT: cmd failed: key=" + cmd.commandCode + " => returnCode=" + cmd.returnCode
             )
-            mService!!.cancelCommand(this)
-            mListener?.onCmdSeriesFinish(this, returnCode)
+            service!!.cancelCommand(this)
+            listener?.onCmdSeriesFinish(this, returnCode)
         } else if (commandCode == 41) {
             // ignore initial empty response
             if (!returnText.isEmpty()) executeNext()
@@ -209,9 +209,9 @@ class CmdSeries(
      */
     fun cancel() {
         Log.v(TAG, "cancelled")
-        mService!!.cancelCommand(this)
-        if (mListener != null && current >= 0 && current < cmdList.size) {
-            mListener.onCmdSeriesFinish(this, -1)
+        service!!.cancelCommand(this)
+        if (listener != null && current >= 0 && current < cmdList.size) {
+            listener.onCmdSeriesFinish(this, -1)
         }
     }
 

@@ -2,21 +2,24 @@ package com.openvehicles.OVMS.entities
 
 class StoredCommand(
 
-    @JvmField var mKey: Long,
-    @JvmField var mTitle: String,
-    @JvmField var mCommand: String
+    @JvmField
+    var key: Long,
+    @JvmField
+    var title: String,
+    @JvmField
+    var command: String
 
 ) : Comparable<StoredCommand> {
 
-    constructor(pTitle: String, pCommand: String) : this(0, pTitle, pCommand)
+    constructor(title: String, command: String) : this(0, title, command)
 
     override fun compareTo(other: StoredCommand): Int {
-        return mTitle.compareTo(other.mTitle, ignoreCase = true)
+        return title.compareTo(other.title, ignoreCase = true)
     }
 
     override fun equals(other: Any?): Boolean {
         return if (other is StoredCommand) {
-            other.mKey == mKey
+            other.key == key
         } else {
             false
         }
