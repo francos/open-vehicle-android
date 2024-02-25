@@ -194,7 +194,7 @@ public class AuxBatteryFragment
 		getCompatActivity().getSupportActionBar().setIcon(R.drawable.ic_action_chart);
 
 		// get data of current car:
-		mCarData = CarsStorage.get().getSelectedCarData();
+		mCarData = CarsStorage.INSTANCE.getSelectedCarData();
 
 		// schedule data loader:
 		showProgressOverlay(getString(R.string.battery_msg_loading_data));

@@ -1,158 +1,148 @@
-package com.openvehicles.OVMS.utils;
+package com.openvehicles.OVMS.utils
 
-import java.util.ArrayList;
-import java.util.Date;
+import android.content.Context
+import android.util.Log
+import com.openvehicles.OVMS.R
+import com.openvehicles.OVMS.ui.utils.Database
+import java.util.Date
 
-import com.openvehicles.OVMS.R;
-import com.openvehicles.OVMS.ui.utils.Database;
+class OVMSNotifications(
+    context: Context
+) {
 
-import android.content.Context;
-import android.database.Cursor;
-import android.util.Log;
+    var notifications: ArrayList<NotificationData> = ArrayList(MAX_SIZE + 1)
 
-public class OVMSNotifications {
-	private static final String TAG = "OVMSNotifications";
-	private static final int MAX_SIZE = 200;
+    private val db: Database
 
-	public ArrayList<NotificationData> notifications;
-	private Context mContext;
-	private Database db;
-	
+    init {
+        // load:
+        Log.d(TAG, "Loading saved notifications list from database")
+        db = Database(context)
+        val cursor = db.notifications
+        var data: NotificationData?
+        while (db.getNextNotification(cursor).also { data = it } != null) {
+            notifications.add(data!!)
+        }
+        cursor.close()
+        Log.d(TAG, String.format("Loaded %d saved notifications", notifications.size))
+        if (notifications.size == 0) {
+            // first time: load welcome notification
+            addNotification(
+                NotificationData.TYPE_INFO,
+                context.getText(R.string.pushnotifications).toString(),
+                context.getText(R.string.pushnotifications_welcome).toString()
+            )
+        } else {
+            db.beginWrite()
+            removeOldNotifications()
+            db.endWrite(true)
+        }
+    }
 
-	public OVMSNotifications(Context context) {
+    @JvmOverloads
+    fun addNotification(
+        type: Int,
+        title: String?,
+        message: String?,
+        timestamp: Date? = Date()
+    ): Boolean {
+        val newNotify = NotificationData(type, timestamp!!, title!!, message!!)
 
-		mContext = context;
+        // add to array, insert sorted by time, check for dupes:
+        var pos: Int = notifications.size
+        while (pos > 0) {
+            val old = notifications[pos - 1]
+            if (old.Timestamp.compareTo(timestamp) <= 0) {
+                // found insert position, check for dupe:
+                if (old.equals(newNotify)) {
+                    Log.d(TAG, "addNotification: dropping duplicate")
+                    return false
+                }
+                // ok, insert here:
+                break
+            }
+            pos--
+        }
+        notifications.add(pos, newNotify)
 
-		// create storage space:
-		notifications = new ArrayList<NotificationData>(MAX_SIZE+1);
+        // add to database:
+        db.beginWrite()
+        db.addNotification(newNotify)
+        removeOldNotifications()
+        db.endWrite(true)
+        return true
+    }
 
-		// load:
-		Log.d(TAG, "Loading saved notifications list from database");
-		db = new Database(context);
-		Cursor cursor = db.getNotifications();
-		NotificationData data;
-		while ((data = db.getNextNotification(cursor)) != null) {
-			notifications.add(data);
-		}
-		cursor.close();
-		Log.d(TAG, String.format("Loaded %d saved notifications", notifications.size()));
+    fun addNotification(
+        stype: String?,
+        title: String?,
+        message: String?,
+        timestamp: Date?
+    ): Boolean {
+        val type: Int = when (stype) {
+            "A" -> NotificationData.TYPE_ALERT
+            "E" -> NotificationData.TYPE_ERROR
+            else -> NotificationData.TYPE_INFO
+        }
+        return addNotification(type, title, message, timestamp)
+    }
 
-		if (notifications.size() == 0) {
-			// first time: load welcome notification
-			addNotification(NotificationData.TYPE_INFO,
-					mContext.getText(R.string.pushnotifications).toString(),
-					mContext.getText(R.string.pushnotifications_welcome).toString());
-		} else {
-			db.beginWrite();
-			removeOldNotifications();
-			db.endWrite(true);
-		}
-	}
+    private fun removeOldNotifications() {
+        var oldNotify: NotificationData
+        if (notifications.size > MAX_SIZE) {
+            while (notifications.size > MAX_SIZE) {
+                oldNotify = notifications[0]
+                notifications.removeAt(0)
+                db.removeNotification(oldNotify)
+            }
+            Log.d(TAG, "removeOldNotifications: new size=" + notifications.size)
+        }
+    }
 
+    fun getArray(filterId: String?): Array<NotificationData?> {
+        val list: ArrayList<NotificationData>
 
-	public boolean addNotification(int type, String title, String message, Date timestamp) {
+        // filter notifications:
+        if (filterId.isNullOrEmpty()) {
+            list = notifications
+            Log.d(TAG, "getArray: unfiltered => " + list.size + " notification(s)")
+        } else {
+            list = ArrayList()
+            for (i in notifications.indices) {
+                val n = notifications[i]
+                if (n.isVehicleId(filterId)) {
+                    list.add(n)
+                }
+            }
+            Log.d(
+                TAG,
+                "getArray: filtered for " + filterId + " => " + list.size + " notification(s)"
+            )
+        }
 
-		NotificationData newNotify = new NotificationData(type, timestamp, title, message);
+        // convert to array:
+        val data = arrayOfNulls<NotificationData>(list.size)
+        list.toArray(data)
+        return data
+    }
 
-		// add to array, insert sorted by time, check for dupes:
-		int pos;
-		for (pos = notifications.size(); pos > 0; pos--) {
-			NotificationData old = notifications.get(pos-1);
-			if (old.Timestamp.compareTo(timestamp) <= 0) {
-				// found insert position, check for dupe:
-				if (old.equals(newNotify)) {
-					Log.d(TAG, "addNotification: dropping duplicate");
-					return false;
-				}
-				// ok, insert here:
-				break;
-			}
-		}
-		notifications.add(pos, newNotify);
+    /*
+     * Inner types
+     */
 
-		// add to database:
-		db.beginWrite();
-		db.addNotification(newNotify);
-		removeOldNotifications();
-		db.endWrite(true);
+    companion object {
 
-		return true;
-	}
+        private const val TAG = "OVMSNotifications"
+        private const val MAX_SIZE = 200
 
-
-	public boolean addNotification(int type, String title, String message) {
-		return addNotification(type, title, message, new Date());
-	}
-
-
-	public boolean addNotification(String stype, String title, String message, Date timestamp) {
-
-		int type;
-		switch (stype) {
-			case "A":
-				type = NotificationData.TYPE_ALERT;
-				break;
-			case "E":
-				type = NotificationData.TYPE_ERROR;
-				break;
-			default:
-				type = NotificationData.TYPE_INFO;
-				break;
-		}
-
-		return addNotification(type, title, message, timestamp);
-	}
-
-
-	public static String guessType(String message) {
-		// if the type classification is missing, we can only
-		// try to derive the type from the text:
-		String type;
-		if (message.contains("ALERT") || message.contains("WARNING"))
-			type = "A";
-		else
-			type = "I";
-		return type;
-	}
-
-
-	private void removeOldNotifications() {
-		NotificationData oldNotify;
-
-		if (notifications.size() > MAX_SIZE) {
-			while (notifications.size() > MAX_SIZE) {
-				oldNotify = notifications.get(0);
-				notifications.remove(0);
-				db.removeNotification(oldNotify);
-			}
-			Log.d(TAG, "removeOldNotifications: new size=" + notifications.size());
-		}
-	}
-
-
-	public NotificationData[] getArray(String filterId) {
-
-		ArrayList<NotificationData> list;
-
-		// filter notifications:
-		if (filterId == null || filterId.isEmpty()) {
-			list = notifications;
-			Log.d(TAG, "getArray: unfiltered => " + list.size() + " notification(s)");
-		} else {
-			list = new ArrayList<NotificationData>();
-			for (int i = 0; i < notifications.size(); i++) {
-				NotificationData n = notifications.get(i);
-				if (n.isVehicleId(filterId)) {
-					list.add(n);
-				}
-			}
-			Log.d(TAG, "getArray: filtered for " + filterId + " => " + list.size() + " notification(s)");
-		}
-
-		// convert to array:
-		NotificationData[] data = new NotificationData[list.size()];
-		list.toArray(data);
-		return data;
-	}
-
+        fun guessType(message: String): String {
+            // if the type classification is missing, we can only
+            // try to derive the type from the text:
+            return if (message.contains("ALERT") || message.contains("WARNING")) {
+                "A"
+            } else {
+                "I"
+            }
+        }
+    }
 }

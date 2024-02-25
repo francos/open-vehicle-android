@@ -1,84 +1,86 @@
-package com.openvehicles.OVMS.utils;
+package com.openvehicles.OVMS.utils
 
-import com.openvehicles.OVMS.R;
+import com.openvehicles.OVMS.R
+import java.io.Serializable
+import java.util.Date
 
-import java.io.Serializable;
-import java.util.Date;
+class NotificationData : Serializable {
 
-public class NotificationData implements Serializable {
-	private static final long serialVersionUID = -3173247800500433809L;
+    @JvmField
+    var ID: Long
+    @JvmField
+    var Type: Int
+    @JvmField
+    var Timestamp: Date
+    @JvmField
+    var Title: String
+    @JvmField
+    var Message: String
 
-	public static final int TYPE_INFO = 0; // "PI"
-	public static final int TYPE_ALERT = 1; // "PA"
-	public static final int TYPE_COMMAND = 2;
-	public static final int TYPE_RESULT_SUCCESS = 3;
-	public static final int TYPE_RESULT_ERROR = 4;
-	public static final int TYPE_USSD = 5;
-	public static final int TYPE_ERROR = 6; // "PE"
+    val messageFormatted: String
+        get() {
+            // default: use line breaks as sent by the module:
+            return Message.replace('\r', '\n')
+        }
 
-	public long ID;
-	public int Type;
-	public Date Timestamp;
-	public String Title;
-	public String Message;
+    val icon: Int
+        get() = when (Type) {
+            TYPE_ALERT, TYPE_ERROR -> android.R.drawable.ic_dialog_alert
+            TYPE_USSD -> android.R.drawable.ic_menu_call
+            TYPE_COMMAND -> R.drawable.ic_action_send
+            TYPE_RESULT_SUCCESS -> android.R.drawable.ic_menu_revert
+            TYPE_RESULT_ERROR -> android.R.drawable.ic_menu_help
+            else -> android.R.drawable.ic_menu_info_details
+        }
 
-	public NotificationData(long ID, int type, Date timestamp, String title, String message) {
-		this.ID = ID;
-		Type = type;
-		Timestamp = timestamp;
-		Title = title;
-		Message = message;
-	}
+    constructor(ID: Long, type: Int, timestamp: Date, title: String, message: String) {
+        this.ID = ID
+        Type = type
+        Timestamp = timestamp
+        Title = title
+        Message = message
+    }
 
-	public NotificationData(int type, Date timestamp, String title, String message) {
-		this.ID = 0;
-		Type = type;
-		Timestamp = timestamp;
-		Title = title;
-		Message = message;
-	}
+    constructor(type: Int, timestamp: Date, title: String, message: String) {
+        ID = 0
+        Type = type
+        Timestamp = timestamp
+        Title = title
+        Message = message
+    }
 
-	public NotificationData(Date timestamp, String title, String message) {
-		this.ID = 0;
-		this.Type = TYPE_INFO;
-		this.Timestamp = timestamp;
-		this.Title = title;
-		this.Message = message;
-	}
+    constructor(timestamp: Date, title: String, message: String) {
+        ID = 0
+        Type = TYPE_INFO
+        Timestamp = timestamp
+        Title = title
+        Message = message
+    }
 
-	// equals operator: used to detect duplicates
-	public boolean equals(NotificationData o) {
-		return (o.Timestamp == Timestamp && o.Type == Type
-				&& o.Title.equals(Title) && o.Message.equals(Message));
-	}
+    // equals operator: used to detect duplicates
+    fun equals(o: NotificationData): Boolean {
+        return o.Timestamp === Timestamp && o.Type == Type && o.Title == Title && o.Message == Message
+    }
 
-	// message formatter:
-	public String getMessageFormatted() {
-		// default: use line breaks as sent by the module:
-		return Message.replace('\r', '\n');
-	}
+    fun isVehicleId(vehicleId: String): Boolean {
+        return Title == vehicleId ||
+                Title.startsWith("$vehicleId:") ||
+                Title.startsWith("$vehicleId ")
+    }
 
-	public int getIcon() {
-		switch (Type) {
-			case NotificationData.TYPE_ALERT:
-			case NotificationData.TYPE_ERROR:
-				return android.R.drawable.ic_dialog_alert;
-			case NotificationData.TYPE_USSD:
-				return android.R.drawable.ic_menu_call;
-			case NotificationData.TYPE_COMMAND:
-				return R.drawable.ic_action_send;
-			case NotificationData.TYPE_RESULT_SUCCESS:
-				return android.R.drawable.ic_menu_revert;
-			case NotificationData.TYPE_RESULT_ERROR:
-				return android.R.drawable.ic_menu_help;
-			default:
-				return android.R.drawable.ic_menu_info_details;
-		}
-	}
+    /*
+     * Inner types
+     */
 
-	public boolean isVehicleId(String vehicleId) {
-		return (Title.equals(vehicleId) ||
-				Title.startsWith(vehicleId + ":") ||
-				Title.startsWith(vehicleId + " "));
-	}
+    companion object {
+
+        private const val serialVersionUID = -3173247800500433809L
+        const val TYPE_INFO = 0 // "PI"
+        const val TYPE_ALERT = 1 // "PA"
+        const val TYPE_COMMAND = 2
+        const val TYPE_RESULT_SUCCESS = 3
+        const val TYPE_RESULT_ERROR = 4
+        const val TYPE_USSD = 5
+        const val TYPE_ERROR = 6 // "PE"
+    }
 }

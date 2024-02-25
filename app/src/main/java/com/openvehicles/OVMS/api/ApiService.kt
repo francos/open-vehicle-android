@@ -124,10 +124,10 @@ class ApiService : Service(), ApiTask.ApiTaskListener, ApiObserver {
 
             // Get vehicle config:
             val carApiKey = appPrefes!!.getData("APIKey")
-            val carData = if (vehicleid != null && !vehicleid.isEmpty()) {
-                CarsStorage.get().getCarById(vehicleid)
+            val carData = if (!vehicleid.isNullOrEmpty()) {
+                CarsStorage.getCarById(vehicleid)
             } else {
-                CarsStorage.get().selectedCarData
+                CarsStorage.getSelectedCarData()
             }
 
             // Check authorization:
@@ -149,7 +149,7 @@ class ApiService : Service(), ApiTask.ApiTaskListener, ApiObserver {
             if (this@ApiService.carData!!.sel_vehicleid != carData.sel_vehicleid) {
                 Log.i(TAG, "CommandReceiver: changing car to: " + carData.sel_vehicleid)
                 changeCar(carData)
-                CarsStorage.get().setSelectedCarId(carData.sel_vehicleid)
+                CarsStorage.setSelectedCarId(carData.sel_vehicleid)
             }
 
             // Send command:
@@ -370,7 +370,7 @@ class ApiService : Service(), ApiTask.ApiTaskListener, ApiObserver {
     fun openConnection() {
         if (carData == null) {
             Log.v(TAG, "openConnection: getting CarData")
-            carData = CarsStorage.get().selectedCarData
+            carData = CarsStorage.getSelectedCarData()
         }
         if (apiTask != null) {
             Log.v(TAG, "openConnection: closing previous connection")

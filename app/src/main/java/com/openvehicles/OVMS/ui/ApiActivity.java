@@ -124,7 +124,7 @@ public class ApiActivity extends AppCompatActivity implements ApiObserver {
 	}
 
 	public boolean changeCar(String pVehicleId) {
-		CarData carData = CarsStorage.get().getCarById(pVehicleId);
+		CarData carData = CarsStorage.INSTANCE.getCarById(pVehicleId);
 		if (carData != null) {
 			return changeCar(carData);
 		}
@@ -137,7 +137,7 @@ public class ApiActivity extends AppCompatActivity implements ApiObserver {
 		Log.i(TAG, "changeCar: switching to vehicle ID " + pCarData.sel_vehicleid);
 
 		// select car:
-		CarsStorage.get().setSelectedCarId(pCarData.sel_vehicleid);
+		CarsStorage.INSTANCE.setSelectedCarId(pCarData.sel_vehicleid);
 		prefs.SaveData("sel_vehicle_label", pCarData.sel_vehicle_label);
 		prefs.SaveData("autotrack", "on");
 		prefs.SaveData("Id", database.getConnectionFilter(pCarData.sel_vehicle_label));

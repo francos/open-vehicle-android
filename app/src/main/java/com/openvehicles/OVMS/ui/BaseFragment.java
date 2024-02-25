@@ -205,7 +205,7 @@ public class BaseFragment extends Fragment implements ApiObserver {
 		cancelCommand();
 
 		// select car:
-		CarsStorage.get().setSelectedCarId(pCarData.sel_vehicleid);
+		CarsStorage.INSTANCE.setSelectedCarId(pCarData.sel_vehicleid);
 		prefs.SaveData("sel_vehicle_label", pCarData.sel_vehicle_label);
 		prefs.SaveData("autotrack", "on");
 		prefs.SaveData("Id", database.getConnectionFilter(pCarData.sel_vehicle_label));

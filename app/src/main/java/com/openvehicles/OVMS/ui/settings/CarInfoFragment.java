@@ -37,9 +37,9 @@ public class CarInfoFragment extends BaseFragment {
 		
 		int editPosition = getArguments().getInt("position", -1);
 		if (editPosition >= 0) {
-			mCarData = CarsStorage.get().getStoredCars().get(editPosition);
+			mCarData = CarsStorage.INSTANCE.getStoredCars().get(editPosition);
 		} else {
-			mCarData = CarsStorage.get().getSelectedCarData();
+			mCarData = CarsStorage.INSTANCE.getSelectedCarData();
 		}
 
 		if (mCarData != null)

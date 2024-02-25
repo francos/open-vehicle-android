@@ -47,7 +47,7 @@ if(project.hasProperty("OVMS.signing")
 }
 
 dependencies {
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.10'
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.22'
 
     implementation 'androidx.multidex:multidex:2.0.1'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'

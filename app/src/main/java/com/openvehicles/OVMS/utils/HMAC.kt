@@ -1,123 +1,126 @@
-package com.openvehicles.OVMS.utils;
+package com.openvehicles.OVMS.utils
+
+import java.security.MessageDigest
+import java.security.NoSuchAlgorithmException
+import java.util.Arrays
 
 //Copyright (c) 1999-2004 Brian Wellington (bwelling@xbill.org)
-
-import java.util.Arrays;
-import java.security.*;
-
 /**
-* A pure java implementation of the HMAC-MD5 secure hash algorithm
-*
-* @author Brian Wellington
-*/
+ * A pure java implementation of the HMAC-MD5 secure hash algorithm
+ *
+ * @author Brian Wellington
+ */
+class HMAC {
 
-public class HMAC {
+    var digest: MessageDigest? = null
+    private lateinit var ipad: ByteArray
+    private lateinit var opad: ByteArray
 
-MessageDigest digest;
-private byte [] ipad, opad;
+    /**
+     * Creates a new HMAC instance
+     * @param digest The message digest object.
+     * @param key The secret key
+     */
+    constructor(digest: MessageDigest, key: ByteArray) {
+        digest.reset()
+        this.digest = digest
+        init(key)
+    }
 
-private static final byte IPAD = 0x36;
-private static final byte OPAD = 0x5c;
-private static final byte PADLEN = 64;
+    /**
+     * Creates a new HMAC instance
+     * @param digestName The name of the message digest function.
+     * @param key The secret key.
+     */
+    constructor(digestName: String, key: ByteArray) {
+        digest = try {
+            MessageDigest.getInstance(digestName)
+        } catch (e: NoSuchAlgorithmException) {
+            throw IllegalArgumentException(
+                "unknown digest algorithm "
+                        + digestName
+            )
+        }
+        init(key)
+    }
 
-private void
-init(byte [] key) {
-	int i;
+    private fun init(key: ByteArray) {
+        var keyByteArray = key
+        if (keyByteArray.size > PADLEN) {
+            keyByteArray = digest!!.digest(keyByteArray)
+            digest!!.reset()
+        }
+        ipad = ByteArray(PADLEN.toInt())
+        opad = ByteArray(PADLEN.toInt())
+        var i = 0
+        while (i < keyByteArray.size) {
+            ipad[i] = (keyByteArray[i].toInt() xor IPAD.toInt()).toByte()
+            opad[i] = (keyByteArray[i].toInt() xor OPAD.toInt()).toByte()
+            i++
+        }
+        while (i < PADLEN) {
+            ipad[i] = IPAD
+            opad[i] = OPAD
+            i++
+        }
+        digest!!.update(ipad)
+    }
 
-	if (key.length > PADLEN) {
-		key = digest.digest(key);
-		digest.reset();
-	}
-	ipad = new byte[PADLEN];
-	opad = new byte[PADLEN];
-	for (i = 0; i < key.length; i++) {
-		ipad[i] = (byte) (key[i] ^ IPAD);
-		opad[i] = (byte) (key[i] ^ OPAD);
-	}
-	for (; i < PADLEN; i++) {
-		ipad[i] = IPAD;
-		opad[i] = OPAD;
-	}
-	digest.update(ipad);
-}
+    /**
+     * Adds data to the current hash
+     * @param data The data
+     * @param offset The index at which to start adding to the hash
+     * @param length The number of bytes to hash
+     */
+    fun update(data: ByteArray, offset: Int, length: Int) {
+        digest!!.update(data, offset, length)
+    }
 
-/**
-* Creates a new HMAC instance
-* @param digest The message digest object.
-* @param key The secret key
-*/
-public
-HMAC(MessageDigest digest, byte [] key) {
-	digest.reset();
-	this.digest = digest;
-	init(key);
-}
+    /**
+     * Adds data to the current hash
+     * @param data The data
+     */
+    fun update(data: ByteArray) {
+        digest!!.update(data)
+    }
 
-/**
-* Creates a new HMAC instance
-* @param digestName The name of the message digest function.
-* @param key The secret key.
-*/
-public
-HMAC(String digestName, byte [] key) {
-	try {
-		digest = MessageDigest.getInstance(digestName);
-	} catch (NoSuchAlgorithmException e) {
-		throw new IllegalArgumentException("unknown digest algorithm "
-						   + digestName);
-	}
-	init(key);
-}
+    /**
+     * Signs the data (computes the secure hash)
+     * @return An array with the signature
+     */
+    fun sign(): ByteArray {
+        val output = digest!!.digest()
+        digest!!.reset()
+        digest!!.update(opad)
+        return digest!!.digest(output)
+    }
 
-/**
-* Adds data to the current hash
-* @param b The data
-* @param offset The index at which to start adding to the hash
-* @param length The number of bytes to hash
-*/
-public void
-update(byte [] b, int offset, int length) {
-	digest.update(b, offset, length);
-}
+    /**
+     * Verifies the data (computes the secure hash and compares it to the input)
+     * @param signature The signature to compare against
+     * @return true if the signature matched, false otherwise
+     */
+    fun verify(signature: ByteArray?): Boolean {
+        return Arrays.equals(signature, sign())
+    }
 
-/**
-* Adds data to the current hash
-* @param b The data
-*/
-public void
-update(byte [] b) {
-	digest.update(b);
-}
+    /**
+     * Resets the HMAC object for further use
+     */
+    fun clear() {
+        digest!!.reset()
+        digest!!.update(ipad)
+    }
 
-/**
-* Signs the data (computes the secure hash)
-* @return An array with the signature
-*/
-public byte []
-sign() {
-	byte [] output = digest.digest();
-	digest.reset();
-	digest.update(opad);
-	return digest.digest(output);
-}
+    /*
+     * Inner types
+     */
 
-/**
-* Verifies the data (computes the secure hash and compares it to the input)
-* @param signature The signature to compare against
-* @return true if the signature matched, false otherwise
-*/
-public boolean
-verify(byte [] signature) {
-	return Arrays.equals(signature, sign());
-}
+    companion object {
 
-/**
-* Resets the HMAC object for further use
-*/
-public void
-clear() {
-	digest.reset();
-	digest.update(ipad);
-}
+        private const val IPAD: Byte = 0x36
+        private const val OPAD: Byte = 0x5c
+        private const val PADLEN: Byte = 64
 
+    }
 }

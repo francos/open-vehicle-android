@@ -45,7 +45,7 @@ public class CarFragment extends BaseFragment implements OnClickListener, OnResu
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
 		// init car data:
-		mCarData = CarsStorage.get().getSelectedCarData();
+		mCarData = CarsStorage.INSTANCE.getSelectedCarData();
 		appPrefes = new AppPrefes(getActivity(), "ovms");
 		
 		// inflate layout:

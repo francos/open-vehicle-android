@@ -42,7 +42,7 @@ public class ControlFragment extends BaseFragment implements OnClickListener,
 		// get data of car to edit:
 		mEditPosition = getArguments().getInt("position", -1);
 		if (mEditPosition >= 0) {
-			mCarData = CarsStorage.get().getStoredCars().get(mEditPosition);
+			mCarData = CarsStorage.INSTANCE.getStoredCars().get(mEditPosition);
 		}
 
 		connectionList = new ConnectionList(getActivity(), this, false);

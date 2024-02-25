@@ -121,7 +121,7 @@ public class NotificationsFragment extends BaseFragment
 		mNotificationManager.cancelAll();
 
 		// update list:
-		mVehicleId = CarsStorage.get().getLastSelectedCarId();
+		mVehicleId = CarsStorage.INSTANCE.getLastSelectedCarId();
 		update();
 	}
 
@@ -278,7 +278,7 @@ public class NotificationsFragment extends BaseFragment
 
 		// check if the car filter needs to be reapplied:
 		if (mFilterList && !carData.sel_vehicleid.equals(mVehicleId)) {
-			String vehicleId = CarsStorage.get().getLastSelectedCarId();
+			String vehicleId = CarsStorage.INSTANCE.getLastSelectedCarId();
 			if (vehicleId != null && !vehicleId.equals(mVehicleId)) {
 				Log.d(TAG, "update: vehicle changed to '" + vehicleId + "' => filter reload");
 				mVehicleId = vehicleId;
@@ -339,7 +339,7 @@ public class NotificationsFragment extends BaseFragment
 			initList();
 
 		// Add command to history:
-		String vehicle_id = CarsStorage.get().getLastSelectedCarId();
+		String vehicle_id = CarsStorage.INSTANCE.getLastSelectedCarId();
 		mNotifications.addNotification(
 				NotificationData.TYPE_COMMAND, vehicle_id + ": " + userCmd, userCmd);
 		updateList();
@@ -380,7 +380,7 @@ public class NotificationsFragment extends BaseFragment
 				cmdOutput += "," + result[i];
 		}
 
-		String vehicle_id = CarsStorage.get().getLastSelectedCarId();
+		String vehicle_id = CarsStorage.INSTANCE.getLastSelectedCarId();
 
 		switch (resCode) {
 			case 0: // ok: result[2] = command output

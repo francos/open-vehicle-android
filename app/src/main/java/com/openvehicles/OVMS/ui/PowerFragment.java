@@ -359,7 +359,7 @@ public class PowerFragment
 		getCompatActivity().getSupportActionBar().setIcon(R.drawable.ic_action_chart);
 
 		// get data of current car:
-		mCarData = CarsStorage.get().getSelectedCarData();
+		mCarData = CarsStorage.INSTANCE.getSelectedCarData();
 
 		getCompatActivity().invalidateOptionsMenu();
 

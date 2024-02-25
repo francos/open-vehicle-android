@@ -63,7 +63,7 @@ public class InfoFragment extends BaseFragment implements OnClickListener,
 			Bundle savedInstanceState) {
 
 		// init car data:
-		mCarsStorage = CarsStorage.get();
+		mCarsStorage = CarsStorage.INSTANCE;
 		mCarData = mCarsStorage.getSelectedCarData();
 
 		// inflate layout:

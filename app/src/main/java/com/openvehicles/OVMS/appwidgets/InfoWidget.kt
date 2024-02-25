@@ -67,7 +67,7 @@ class InfoWidget : ApiWidget<InfoWidget>(InfoWidget::class.java) {
         val height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 100)
 
         // Update widget view:
-        val carData = CarsStorage.get().selectedCarData
+        val carData = CarsStorage.getSelectedCarData()
         views.setImageViewBitmap(
             R.id.info_widget_image,
             renderWidget(context, carData, width, height)

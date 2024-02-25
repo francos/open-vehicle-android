@@ -38,9 +38,9 @@ public class FeaturesFragment extends BaseFragment implements OnResultCommandLis
 		// get data of car to edit:
 		mEditPosition = getArguments().getInt("position", -1);
 		if (mEditPosition >= 0) {
-			mCarData = CarsStorage.get().getStoredCars().get(mEditPosition);
+			mCarData = CarsStorage.INSTANCE.getStoredCars().get(mEditPosition);
 		} else {
-			mCarData = CarsStorage.get().getSelectedCarData();
+			mCarData = CarsStorage.INSTANCE.getSelectedCarData();
 		}
 		Log.d(TAG, "mEditPosition=" + mEditPosition + " → mCarData=" + mCarData);
 

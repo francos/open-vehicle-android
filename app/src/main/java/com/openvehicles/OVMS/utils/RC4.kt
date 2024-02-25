@@ -1,4 +1,4 @@
-package com.openvehicles.OVMS.utils;
+package com.openvehicles.OVMS.utils
 
 /*
  * Copyright (C) 2003 Clarence Ho (clarence@clarenceho.net)
@@ -38,27 +38,32 @@ package com.openvehicles.OVMS.utils;
  * This is a simple implementation of the RC4 (tm) encryption algorithm.  The
  * author implemented this class for some simple applications
  * that don't need/want/require the Sun's JCE framework.
- * <p>
+ *
+ *
  * But if you are looking for encryption algorithms for a
  * full-blown application,
  * it would be better to stick with Sun's JCE framework.  You can find
  * a *free* JCE implementation with RC4 (tm) at
  * Cryptix (http://www.cryptix.org/).
- * <p>
+ *
+ *
  * Note that RC4 (tm) is a trademark of RSA Data Security, Inc.
  * Also, if you are within USA, you may need to acquire licenses from
  * RSA to use RC4.
  * Please check your local law.  The author is not
  * responsible for any illegal use of this code.
- * <p>
+ *
+ *
  * @author  Clarence Ho
  */
-public class RC4 {
-    
-    private byte state[] = new byte[256];
-    private int x;
-    private int y;
-    
+class RC4(
+    key: ByteArray
+) {
+
+    private val state = ByteArray(256)
+    private var x: Int
+    private var y: Int
+
     /**
      * Initializes the class with a string key. The length
      * of a normal key should be between 1 and 2048 bits.  But
@@ -66,9 +71,7 @@ public class RC4 {
      *
      * @param key   the encryption/decryption key
      */
-    public RC4(String key) throws NullPointerException {
-        this(key.getBytes());
-    }
+    constructor(key: String) : this(key.toByteArray())
 
     /**
      * Initializes the class with a byte array key.  The length
@@ -77,95 +80,69 @@ public class RC4 {
      *
      * @param key   the encryption/decryption key
      */
-    public RC4(byte[] key) throws NullPointerException {
-
-        for (int i=0; i < 256; i++) {
-            state[i] = (byte)i;
+    init {
+        for (i in 0..255) {
+            state[i] = i.toByte()
         }
-        
-        x = 0;
-        y = 0;
-        
-        int index1 = 0;
-        int index2 = 0;
-        
-        byte tmp;
-        
-        if (key == null || key.length == 0) {
-            throw new NullPointerException();
+        x = 0
+        y = 0
+        var index1 = 0
+        var index2 = 0
+        var tmp: Byte
+        if (key.isEmpty()) {
+            throw NullPointerException()
         }
-        
-        for (int i=0; i < 256; i++) {
-
-            index2 = ((key[index1] & 0xff) + (state[i] & 0xff) + index2) & 0xff;
-
-            tmp = state[i];
-            state[i] = state[index2];
-            state[index2] = tmp;
-            
-            index1 = (index1 + 1) % key.length;
+        for (i in 0..255) {
+            index2 = (key[index1].toInt() and 0xff) + (state[i].toInt() and 0xff) + index2 and 0xff
+            tmp = state[i]
+            state[i] = state[index2]
+            state[index2] = tmp
+            index1 = (index1 + 1) % key.size
         }
-
-
-
     }
 
-    /** 
+    /**
      * RC4 encryption/decryption.
      *
      * @param data  the data to be encrypted/decrypted
      * @return the result of the encryption/decryption
      */
-    public byte[] rc4(String data) {
-        
+    fun rc4(data: String?): ByteArray? {
         if (data == null) {
-            return null;
+            return null
         }
-        
-        byte[] tmp = data.getBytes();
-        
-        this.rc4(tmp);
-        
-        return tmp;
+        val tmp = data.toByteArray()
+        this.rc4(tmp)
+        return tmp
     }
 
-    /** 
+    /**
      * RC4 encryption/decryption.
      *
      * @param buf  the data to be encrypted/decrypted
      * @return the result of the encryption/decryption
      */
-    public byte[] rc4(byte[] buf) {
-
+    fun rc4(buf: ByteArray?): ByteArray? {
         //int lx = this.x;
         //int ly = this.y;
-        
-        int xorIndex;
-        byte tmp;
-        
+        var xorIndex: Int
+        var tmp: Byte
         if (buf == null) {
-            return null;
+            return null
         }
-        
-        byte[] result = new byte[buf.length];
-        
-        for (int i=0; i < buf.length; i++) {
-
-            x = (x + 1) & 0xff;
-            y = ((state[x] & 0xff) + y) & 0xff;
-
-            tmp = state[x];
-            state[x] = state[y];
-            state[y] = tmp;
-            
-            xorIndex = ((state[x] &0xff) + (state[y] & 0xff)) & 0xff;
-            result[i] = (byte)(buf[i] ^ state[xorIndex]);
+        val result = ByteArray(buf.size)
+        for (i in buf.indices) {
+            x = x + 1 and 0xff
+            y = (state[x].toInt() and 0xff) + y and 0xff
+            tmp = state[x]
+            state[x] = state[y]
+            state[y] = tmp
+            xorIndex = (state[x].toInt() and 0xff) + (state[y].toInt() and 0xff) and 0xff
+            result[i] = (buf[i].toInt() xor state[xorIndex].toInt()).toByte()
         }
-        
+
         //this.x = lx;
         //this.y = ly;
-        
-        return result;
+        return result
     }
-    
 }

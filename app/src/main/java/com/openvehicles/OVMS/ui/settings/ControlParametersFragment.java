@@ -35,7 +35,7 @@ public class ControlParametersFragment extends BaseFragment implements OnResultC
 		// get data of car to edit:
 		mEditPosition = getArguments().getInt("position", -1);
 		if (mEditPosition >= 0) {
-			mCarData = CarsStorage.get().getStoredCars().get(mEditPosition);
+			mCarData = CarsStorage.INSTANCE.getStoredCars().get(mEditPosition);
 		}
 
 		mListView = new ListView(container.getContext());

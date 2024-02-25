@@ -184,9 +184,9 @@ class CommandActivity : ApiActivity(), CmdSeries.Listener {
             // Get vehicle config:
             val carApiKey = appPrefes!!.getData("APIKey")
             val carData = if (vehicleId != null && !vehicleId.isEmpty()) {
-                CarsStorage.get().getCarById(vehicleId)
+                CarsStorage.getCarById(vehicleId)
             } else {
-                CarsStorage.get().selectedCarData
+                CarsStorage.getSelectedCarData()
             }
 
             // Configure job:
@@ -255,7 +255,7 @@ class CommandActivity : ApiActivity(), CmdSeries.Listener {
         }
 
         // Check selected car:
-        val selectedCarId = CarsStorage.get().lastSelectedCarId
+        val selectedCarId = CarsStorage.getLastSelectedCarId()
         if (!TextUtils.equals(selectedCarId, vehicleId)) {
             Log.d(TAG, "startCommand: changing car to $vehicleId")
             changeCar(vehicleId)
@@ -283,7 +283,7 @@ class CommandActivity : ApiActivity(), CmdSeries.Listener {
             database!!.addNotification(
                 NotificationData(
                     NotificationData.TYPE_COMMAND,
-                    Date(), "$vehicleId: $command", command
+                    Date(), "$vehicleId: $command", command!!
                 )
             )
             sendBroadcast(

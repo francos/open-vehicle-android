@@ -71,7 +71,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         if (timeStamp == null) timeStamp = Date()
 
         // identify the vehicle:
-        val car = CarsStorage.get().getCarById(contentTitle)
+        val car = CarsStorage.getCarById(contentTitle)
         if (car == null) {
             Log.w(TAG, "vehicle ID '$contentTitle' not found => drop message")
             return
@@ -112,7 +112,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         // prepare user notification filter check:
         val filterInfo = appPrefes!!.getData("notifications_filter_info") == "on"
         val filterAlert = appPrefes!!.getData("notifications_filter_alert") == "on"
-        val selectedCarId = CarsStorage.get().lastSelectedCarId
+        val selectedCarId = CarsStorage.getLastSelectedCarId()
         val isSelectedCar = car.sel_vehicleid == selectedCarId
         if (!isNew) {
             Log.d(TAG, "message is duplicate => skip user notification")

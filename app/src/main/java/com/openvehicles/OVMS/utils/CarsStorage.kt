@@ -1,185 +1,171 @@
-package com.openvehicles.OVMS.utils;
+package com.openvehicles.OVMS.utils
 
-import android.content.Context;
-import android.content.SharedPreferences;
-import android.preference.PreferenceManager;
-import android.text.TextUtils;
-import android.util.Log;
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.SharedPreferences
+import android.preference.PreferenceManager
+import android.text.TextUtils
+import android.util.Log
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import com.openvehicles.OVMS.BaseApp.Companion.app
+import com.openvehicles.OVMS.R
+import com.openvehicles.OVMS.entities.CarData
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.io.ObjectInputStream
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-import com.openvehicles.OVMS.BaseApp;
-import com.openvehicles.OVMS.R;
-import com.openvehicles.OVMS.entities.CarData;
+// TODO: Remove SuppressLint and improve code to avoid warning
+@SuppressLint("StaticFieldLeak")
+object CarsStorage {
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.InputStreamReader;
-import java.io.ObjectInputStream;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
+    private const val TAG = "CarsStorage"
 
-public class CarsStorage {
-	private static final String TAG = "CarsStorage";
+    private val context: Context? = app
+    private var storedCars: ArrayList<CarData>? = null
+    private var lastSelectedCarId: String? = null
+    private var preferences: SharedPreferences? = null
 
-	private static CarsStorage sInstance;
-	private final Context mContext = BaseApp.Companion.getApp();
-	private ArrayList<CarData> mStoredCars;
-	private String mLastSelectedCarId;
-	private SharedPreferences mPreferences;	
-	
-	public static CarsStorage get() {
-		if (sInstance == null) {
-			sInstance = new CarsStorage(); 
-		}
-		return sInstance;
-	}
-	
-	@SuppressWarnings("unchecked")
-	public ArrayList<CarData> getStoredCars() {
-		boolean doSave = false;
+    fun getStoredCars(): ArrayList<CarData> {
+        var doSave = false
 
-		// Already loaded?
-		if (mStoredCars != null && mStoredCars.size() > 0) {
-			return mStoredCars;
-		}
+        // Already loaded?
+        if (storedCars != null && storedCars!!.size > 0) {
+            return storedCars!!
+        }
 
-		// Load JSON car storage file:
-		try {
-			FileInputStream inputStream = mContext.openFileInput(Consts.STOREDCARS_FILENAME_JSON);
-			Log.i(TAG, "getStoredCars: loading " + Consts.STOREDCARS_FILENAME_JSON);
-			InputStreamReader isr = new InputStreamReader(inputStream);
-			BufferedReader bufferedReader = new BufferedReader(isr);
-			StringBuilder sb = new StringBuilder();
-			String line;
-			while ((line = bufferedReader.readLine()) != null) {
-				sb.append(line);
-			}
-			String json = sb.toString();
-			Gson gson = new Gson();
-			Type type = new TypeToken<ArrayList<CarData>>(){}.getType();
-			mStoredCars = gson.fromJson(json, type);
-		} catch (Exception e) {
-			Log.e(TAG, "getStoredCars: failed loading " + Consts.STOREDCARS_FILENAME_JSON);
-			e.printStackTrace();
-		}
+        // Load JSON car storage file:
+        try {
+            val inputStream = context!!.openFileInput(Consts.STOREDCARS_FILENAME_JSON)
+            Log.i(TAG, "getStoredCars: loading " + Consts.STOREDCARS_FILENAME_JSON)
+            val isr = InputStreamReader(inputStream)
+            val bufferedReader = BufferedReader(isr)
+            val sb = StringBuilder()
+            var line: String?
+            while (bufferedReader.readLine().also { line = it } != null) {
+                sb.append(line)
+            }
+            val json = sb.toString()
+            val gson = Gson()
+            val type = object : TypeToken<ArrayList<CarData?>?>() {}.type
+            storedCars = gson.fromJson(json, type)
+        } catch (e: Exception) {
+            Log.e(TAG, "getStoredCars: failed loading " + Consts.STOREDCARS_FILENAME_JSON)
+            e.printStackTrace()
+        }
 
-		// Fallback to old ObjectStream storage:
-		if (mStoredCars == null || mStoredCars.size() == 0) {
-			try {
-				FileInputStream fis = mContext.openFileInput(Consts.STOREDCARS_FILENAME_OBJ);
-				Log.i(TAG, "getStoredCars: fallback; loading " + Consts.STOREDCARS_FILENAME_OBJ);
-				ObjectInputStream is = new ObjectInputStream(fis);
-				mStoredCars = (ArrayList<CarData>) is.readObject();
-				is.close();
-				doSave = true; // upgrade to JSON storage
-			} catch (Exception e) {
-				Log.e(TAG, "getStoredCars: failed loading " + Consts.STOREDCARS_FILENAME_OBJ);
-				e.printStackTrace();
-			}
-		}
+        // Fallback to old ObjectStream storage:
+        if (storedCars == null || storedCars!!.size == 0) {
+            try {
+                val fis = context!!.openFileInput(Consts.STOREDCARS_FILENAME_OBJ)
+                Log.i(TAG, "getStoredCars: fallback; loading " + Consts.STOREDCARS_FILENAME_OBJ)
+                val `is` = ObjectInputStream(fis)
+                storedCars = `is`.readObject() as ArrayList<CarData>
+                `is`.close()
+                doSave = true // upgrade to JSON storage
+            } catch (e: Exception) {
+                Log.e(TAG, "getStoredCars: failed loading " + Consts.STOREDCARS_FILENAME_OBJ)
+                e.printStackTrace()
+            }
+        }
+        if (storedCars != null && storedCars!!.size > 0) {
+            Log.i(TAG, "getStoredCars: OK, loaded " + storedCars!!.size + " car(s)")
+        } else {
+            Log.i(TAG, "getStoredCars: initializing car list")
+            storedCars = ArrayList()
+            initDemoCar()
+            doSave = true
+        }
 
-		if (mStoredCars != null && mStoredCars.size() > 0) {
-			Log.i(TAG, "getStoredCars: OK, loaded " + mStoredCars.size() + " car(s)");
-		} else {
-			Log.i(TAG, "getStoredCars: initializing car list");
-			mStoredCars = new ArrayList<CarData>();
-			initDemoCar();
-			doSave = true;
-		}
+        // Upgrade to JSON:
+        if (doSave) {
+            saveStoredCars()
+        }
+        return storedCars!!
+    }
 
-		// Upgrade to JSON:
-		if (doSave) {
-			saveStoredCars();
-		}
+    fun saveStoredCars() {
+        if (storedCars == null) {
+            return
+        }
 
-		return mStoredCars;
-	}
+        // Save JSON car storage file:
+        try {
+            val fos = context!!.openFileOutput(
+                Consts.STOREDCARS_FILENAME_JSON,
+                Context.MODE_PRIVATE
+            )
+            Log.i(TAG, "saveStoredCars: saving to " + Consts.STOREDCARS_FILENAME_JSON)
+            val gson = Gson()
+            val json = gson.toJson(storedCars)
+            fos.write(json.toByteArray())
+            fos.close()
+        } catch (e: Exception) {
+            Log.e(TAG, "saveStoredCars: FAILED saving to " + Consts.STOREDCARS_FILENAME_JSON)
+            e.printStackTrace()
+        }
+    }
 
-	public void saveStoredCars() {
-		if (mStoredCars == null) {
-			return;
-		}
+    fun getCarById(pCarId: String?): CarData? {
+        if (storedCars == null) {
+            getStoredCars()
+        }
+        for (car in storedCars!!) {
+            if (car.sel_vehicleid == pCarId) return car
+        }
+        return null
+    }
 
-		// Save JSON car storage file:
-		try {
-			FileOutputStream fos = mContext.openFileOutput(Consts.STOREDCARS_FILENAME_JSON,
-					Context.MODE_PRIVATE);
-			Log.i(TAG, "saveStoredCars: saving to " + Consts.STOREDCARS_FILENAME_JSON);
-			Gson gson = new Gson();
-			String json = gson.toJson(mStoredCars);
-			fos.write(json.getBytes());
-			fos.close();
-		} catch(Exception e) {
-			Log.e(TAG, "saveStoredCars: FAILED saving to " + Consts.STOREDCARS_FILENAME_JSON);
-			e.printStackTrace();
-		}
-	}
-	
-	public CarData getCarById(String pCarId) {
-		if (mStoredCars == null) getStoredCars();
-		for (CarData car: mStoredCars) {
-			if (car.sel_vehicleid.equals(pCarId)) return car;
-		}
-		return null;
-	}
-	
-	public void initDemoCar() {
-		Log.v(TAG, "Initializing demo car.");
+    fun initDemoCar() {
+        Log.v(TAG, "Initializing demo car.")
+        val demoCar = CarData()
+        demoCar.sel_vehicleid = "DEMO"
+        demoCar.sel_vehicle_label = "Demonstration Car"
+        demoCar.sel_server_password = "DEMO"
+        demoCar.sel_module_password = "DEMO"
+        demoCar.sel_vehicle_image = "car_roadster_lightninggreen"
+        val mServers = context!!.resources.getStringArray(R.array.select_server_options)
+        val mGcmSenders = context.resources.getStringArray(R.array.select_server_gcm_senders)
+        demoCar.sel_server = mServers[0]
+        demoCar.sel_gcm_senderid = mGcmSenders[0]
+        storedCars!!.add(demoCar)
+        setSelectedCarId(demoCar.sel_vehicleid)
+    }
 
-		CarData demoCar = new CarData();
-		demoCar.sel_vehicleid = "DEMO";
-		demoCar.sel_vehicle_label = "Demonstration Car";
-		demoCar.sel_server_password = "DEMO";
-		demoCar.sel_module_password = "DEMO";
-		demoCar.sel_vehicle_image = "car_roadster_lightninggreen";
+    fun getLastSelectedCarId(): String? {
+        if (!TextUtils.isEmpty(lastSelectedCarId)) return lastSelectedCarId
+        lastSelectedCarId = getPrefs()!!.getString("LASTSELECTEDCARID", null)
+        return lastSelectedCarId
+    }
 
-		String[] mServers = mContext.getResources().getStringArray(R.array.select_server_options);
-		String[] mGcmSenders = mContext.getResources().getStringArray(R.array.select_server_gcm_senders);
-		demoCar.sel_server = mServers[0];
-		demoCar.sel_gcm_senderid = mGcmSenders[0];
+    fun getSelectedCarData(): CarData? {
+        var result = getCarById(getLastSelectedCarId())
+        if (result == null && storedCars!!.size > 0) {
+            result = storedCars!![0]
+            setSelectedCarId(result.sel_vehicleid)
+        }
+        return result
+    }
 
-		mStoredCars.add(demoCar);
-		setSelectedCarId(demoCar.sel_vehicleid);
-	}
-	
-	public String getLastSelectedCarId() {
-		if (!TextUtils.isEmpty(mLastSelectedCarId)) return mLastSelectedCarId;
-		mLastSelectedCarId = getPrefs().getString("LASTSELECTEDCARID", null);
-		return mLastSelectedCarId; 
-	}
-	
-	public CarData getSelectedCarData() {
-		CarData result = getCarById(getLastSelectedCarId());
-		if (result == null && mStoredCars.size() > 0) {
-			result = mStoredCars.get(0);
-			setSelectedCarId(result.sel_vehicleid);
-		}
-		return result;
-	}
-	
-	public void setSelectedCarId(String pCarId) {
-		mLastSelectedCarId = pCarId;
-		getPrefs().edit().putString("LASTSELECTEDCARID", mLastSelectedCarId).commit();
-	}
+    fun setSelectedCarId(pCarId: String?) {
+        lastSelectedCarId = pCarId
+        getPrefs()!!.edit().putString("LASTSELECTEDCARID", lastSelectedCarId).commit()
+    }
 
-	public int getSelectedCarIndex() {
-		String id = getLastSelectedCarId();
-		if (id != null && mStoredCars.size() > 0) {
-			for (int i = 0; i < mStoredCars.size(); i++) {
-				if (mStoredCars.get(i).sel_vehicleid.equals(id))
-					return i;
-			}
-		}
-		return 0;
-	}
+    fun getSelectedCarIndex(): Int {
+        val id = getLastSelectedCarId()
+        if (id != null && storedCars!!.size > 0) {
+            for (i in storedCars!!.indices) {
+                if (storedCars!![i].sel_vehicleid == id) return i
+            }
+        }
+        return 0
+    }
 
-	public SharedPreferences getPrefs() {
-		if (mPreferences == null) {
-			mPreferences = PreferenceManager.getDefaultSharedPreferences(mContext);
-		}
-		return mPreferences;
-	}
-
+    fun getPrefs(): SharedPreferences? {
+        if (preferences == null) {
+            preferences = PreferenceManager.getDefaultSharedPreferences(context)
+        }
+        return preferences
+    }
 }

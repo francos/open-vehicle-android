@@ -36,7 +36,7 @@ public class SettingsFragment extends BaseFragment implements
 
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,
-			Bundle savedInstanceState) {
+							 Bundle savedInstanceState) {
 		mListView = new ListView(container.getContext());
 		return mListView;
 	}
@@ -46,8 +46,7 @@ public class SettingsFragment extends BaseFragment implements
 		super.onActivityCreated(savedInstanceState);
 		mListView.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
 		mListView.setOnItemClickListener(this);
-		mListView.setAdapter(new SettingsAdapter(getActivity(), CarsStorage
-				.get().getStoredCars()));
+		mListView.setAdapter(new SettingsAdapter(getActivity(), CarsStorage.INSTANCE.getStoredCars()));
 		setHasOptionsMenu(true);
 	}
 
@@ -90,7 +89,7 @@ public class SettingsFragment extends BaseFragment implements
 
 	@Override
 	public void onItemClick(AdapterView<?> parent, View view, int position,
-			long id) {
+							long id) {
 		switch (view.getId()) {
 			case R.id.btn_edit:
 				edit(position);
