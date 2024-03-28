@@ -1,90 +1,99 @@
-package com.openvehicles.OVMS.ui.witdet;
+package com.openvehicles.OVMS.ui.witdet
 
-import android.content.Context;
-import android.content.res.TypedArray;
-import android.util.AttributeSet;
-import android.util.TypedValue;
-import android.view.View;
-import android.view.View.OnClickListener;
-import android.widget.CompoundButton;
-import android.widget.LinearLayout;
+import android.content.Context
+import android.util.AttributeSet
+import android.util.TypedValue
+import android.view.View
+import android.widget.CompoundButton
+import android.widget.LinearLayout
+import com.openvehicles.OVMS.R
+import com.openvehicles.OVMS.ui.utils.Ui
 
-import com.openvehicles.OVMS.R;
-import com.openvehicles.OVMS.ui.utils.Ui.OnChangeListener;
+class SwitcherView @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null
+) : LinearLayout(context, attrs), View.OnClickListener {
 
-public class SwitcherView extends LinearLayout implements OnClickListener  {
-	private int mSelected = -1;
-	private OnChangeListener<SwitcherView> mListener;
-	
-	public SwitcherView(Context context, AttributeSet attrs) {
-		super(context, attrs);
-		setOrientation(HORIZONTAL);
-		
-		CharSequence[] values = null;
-		TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.SwitcherView);
-		try {
-			values = a.getTextArray(R.styleable.SwitcherView_android_entries);
-		} finally {
-			a.recycle();
-		}
-		
-		if (values == null) values = new CharSequence[] {"Off", "On"};
-		setValues(values);
-	}
-	
-	public SwitcherView(Context context) {
-		this(context, null);
-	}
-	
-	public void setOnChangeListener(OnChangeListener<SwitcherView> pListener) {
-		mListener = pListener;
-	}
-	
-	public void setValues(CharSequence ...pValues) {
-		int side = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 6, getResources().getDisplayMetrics());		
-		int top = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8, getResources().getDisplayMetrics());		
-		
-		removeAllViews();
-		for (CharSequence text: pValues) {
-			SwitcherButton b = new SwitcherButton(getContext());
-			if (mSelected < 0 && getChildCount() == 0) b.setChecked(true);
-			b.setSingleLine();
-			b.setText(text);
-			if (!isInEditMode()) b.setTextAppearance(getContext(), android.R.style.TextAppearance_Small);
-			b.setTextColor(0xFFFFFFFF);
-			b.setBackgroundResource(R.drawable.item_choice);
-			b.setPadding(side, top, side, top);
-			b.setOnClickListener(this);
-			addView(b);
-		}
-	}
+    private var listener: Ui.OnChangeListener<SwitcherView>? = null
 
-	@Override
-	public void onClick(View v) {
-		int count = getChildCount();
-		SwitcherButton b;
-		for (int i=0; i<count; i++) {
-			b = (SwitcherButton) getChildAt(i);
-			b.setChecked(b == v);
-			if (b == v) mSelected = i;
-		}
-		if (mListener != null) mListener.onAction(this);
-	}
-	
-	public int getSelected() {
-		return mSelected < 0 ? 0 : mSelected;
-	}
-	
-	public void setSelected(int pSelected) {
-		if (pSelected < 0 || pSelected > getChildCount()-1) 
-			throw new IndexOutOfBoundsException("Item out of range");
-		onClick(getChildAt(pSelected));
-	}
-	
-	public static class SwitcherButton extends CompoundButton {
-		public SwitcherButton(Context context) {
-			super(context);
-			setFocusable(false);
-		}
-	}
+    private var _selected = -1
+    var selected: Int
+        get() = if (_selected < 0) 0 else _selected
+        set(pSelected) {
+            if (pSelected < 0 || pSelected > childCount - 1) {
+                throw IndexOutOfBoundsException("Item out of range")
+            }
+            onClick(getChildAt(pSelected))
+        }
+
+    init {
+        orientation = HORIZONTAL
+        val attributes = context.obtainStyledAttributes(attrs, R.styleable.SwitcherView)
+        var values: Array<CharSequence>? = try {
+            attributes.getTextArray(R.styleable.SwitcherView_android_entries)
+        } finally {
+            attributes.recycle()
+        }
+        if (values == null) {
+            values = arrayOf("Off", "On")
+        }
+        setValues(*values)
+    }
+
+    fun setOnChangeListener(listener: Ui.OnChangeListener<SwitcherView>?) {
+        this.listener = listener
+    }
+
+    private fun setValues(vararg pValues: CharSequence?) {
+        val side = TypedValue
+            .applyDimension(TypedValue.COMPLEX_UNIT_DIP, 6f, resources.displayMetrics)
+            .toInt()
+        val top = TypedValue
+            .applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8f, resources.displayMetrics)
+            .toInt()
+
+        removeAllViews()
+
+        for (text in pValues) {
+            val button = SwitcherButton(context)
+            if (_selected < 0 && childCount == 0) {
+                button.setChecked(true)
+            }
+            button.setSingleLine()
+            button.text = text
+            if (!isInEditMode) {
+                button.setTextAppearance(context, android.R.style.TextAppearance_Small)
+            }
+            button.setTextColor(-0x1)
+            button.setBackgroundResource(R.drawable.item_choice)
+            button.setPadding(side, top, side, top)
+            button.setOnClickListener(this)
+            addView(button)
+        }
+    }
+
+    override fun onClick(v: View) {
+        val count = childCount
+        var button: SwitcherButton
+        for (i in 0 until count) {
+            button = getChildAt(i) as SwitcherButton
+            button.setChecked(button === v)
+            if (button === v) {
+                _selected = i
+            }
+        }
+        if (listener != null) {
+            listener!!.onAction(this)
+        }
+    }
+
+    /*
+     * Inner types
+     */
+
+    class SwitcherButton(context: Context?) : CompoundButton(context) {
+        init {
+            isFocusable = false
+        }
+    }
 }

@@ -1,34 +1,38 @@
-package com.openvehicles.OVMS.ui.witdet;
+package com.openvehicles.OVMS.ui.witdet
 
-import android.content.Context;
-import android.graphics.Canvas;
-import android.util.AttributeSet;
-import android.view.MotionEvent;
-import androidx.appcompat.widget.AppCompatSeekBar;
+import android.content.Context
+import android.graphics.Canvas
+import android.util.AttributeSet
+import android.view.MotionEvent
+import androidx.appcompat.widget.AppCompatSeekBar
 
-public class ReversedSeekBar extends AppCompatSeekBar {
-	public boolean isReversed = true;
+class ReversedSeekBar(
+    paramContext: Context?,
+    paramAttributeSet: AttributeSet?
+) : AppCompatSeekBar(paramContext!!, paramAttributeSet) {
 
-	public ReversedSeekBar(Context paramContext, AttributeSet paramAttributeSet) {
-		super(paramContext, paramAttributeSet);
-	}
+    private var isReversed = true
 
-	protected void onDraw(Canvas paramCanvas) {
-		if (isReversed) {
-			paramCanvas.scale(-1.0F, 1.0F, getWidth() / 2.0F, getHeight() / 2.0F);
-		}
-		try {
-			super.onDraw(paramCanvas);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
+    override fun onDraw(canvas: Canvas) {
+        if (isReversed) {
+            canvas.scale(-1.0f, 1.0f, width / 2.0f, height / 2.0f)
+        }
 
-	public boolean onTouchEvent(MotionEvent paramMotionEvent) {
-		if (isReversed) {
-			paramMotionEvent.setLocation(getWidth() - paramMotionEvent.getX(),
-					paramMotionEvent.getY());
-		}
-		return super.onTouchEvent(paramMotionEvent);
-	}
+        try {
+            super.onDraw(canvas)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    override fun onTouchEvent(motionEvent: MotionEvent): Boolean {
+        if (isReversed) {
+            motionEvent.setLocation(
+                width - motionEvent.x,
+                motionEvent.y
+            )
+        }
+
+        return super.onTouchEvent(motionEvent)
+    }
 }
