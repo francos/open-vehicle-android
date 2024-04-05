@@ -233,10 +233,10 @@ public class NotificationsFragment extends BaseFragment
 					Float.toString(mFontSize), R.string.Set, false,
 					new Ui.OnChangeListener<String>() {
 						@Override
-						public void onAction(String pData) {
+						public void onAction(String data) {
 							float val;
 							try {
-								val = Float.parseFloat(pData);
+								val = Float.parseFloat(data);
 							} catch (Exception e) {
 								val = 10;
 							}

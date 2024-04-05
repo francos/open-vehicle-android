@@ -411,12 +411,12 @@ public class FragMap extends BaseFragment implements OnInfoWindowClickListener,
 			String connectionList = appPrefes.getData("Id");
 			Log.d(TAG, "updateMapDetails: connectionList=(" + connectionList + ")");
 			if (!connectionList.equals(""))
-				cursor = database.get_mapdetails(connectionList);
+				cursor = database.getMapDetails(connectionList);
 			else
-				cursor = database.get_mapdetails();
+				cursor = database.getMapDetails();
 		} else {
 			// filter off:
-			cursor = database.get_mapdetails();
+			cursor = database.getMapDetails();
 		}
 
 		if (appPrefes.getData("inrange").equals("on")) {
@@ -636,7 +636,7 @@ public class FragMap extends BaseFragment implements OnInfoWindowClickListener,
 
 	@Override
 	public void clearCache() {
-		database.clear_mapdetails();
+		database.clearMapDetails();
 		MainActivity.updateLocation.updatelocation();
 	}
 

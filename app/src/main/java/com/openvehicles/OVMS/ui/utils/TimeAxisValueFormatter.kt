@@ -1,33 +1,33 @@
-package com.openvehicles.OVMS.ui.utils;
+package com.openvehicles.OVMS.ui.utils
 
-import com.github.mikephil.charting.formatter.ValueFormatter;
-
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import com.github.mikephil.charting.formatter.ValueFormatter
+import java.text.SimpleDateFormat
+import java.util.Date
 
 /**
  * TimeAxisValueFormatter: format chart axis time values
- * 	Expects values to be in seconds since startOffset
+ * Expects values to be in seconds since startOffset
  */
-public class TimeAxisValueFormatter extends ValueFormatter {
-	private long offset;
-	private SimpleDateFormat timeFmt;
-	private Date date;
+class TimeAxisValueFormatter : ValueFormatter {
 
-	public TimeAxisValueFormatter() {
-		offset = 0;
-		timeFmt = new SimpleDateFormat("HH:mm");
-		date = new Date();
-	}
-	public TimeAxisValueFormatter(long offset, String timeFmtPattern) {
-		this.offset = offset;
-		timeFmt = new SimpleDateFormat(timeFmtPattern);
-		date = new Date();
-	}
+    private var offset: Long
+    private var timeFmt: SimpleDateFormat
+    private var date: Date
 
-	@Override
-	public String getFormattedValue(float value) {
-		date.setTime((offset + (long)value) * 1000);
-		return timeFmt.format(date);
-	}
+    constructor() {
+        offset = 0
+        timeFmt = SimpleDateFormat("HH:mm")
+        date = Date()
+    }
+
+    constructor(offset: Long, timeFmtPattern: String?) {
+        this.offset = offset
+        timeFmt = SimpleDateFormat(timeFmtPattern)
+        date = Date()
+    }
+
+    override fun getFormattedValue(value: Float): String {
+        date.setTime((offset + value.toLong()) * 1000)
+        return timeFmt.format(date)
+    }
 }

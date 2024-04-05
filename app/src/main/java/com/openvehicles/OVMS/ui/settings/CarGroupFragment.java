@@ -60,8 +60,8 @@ public class CarGroupFragment
 		Ui.showPinDialog(context, mAdapter.getTitleRow(context, position), Long.toString(id),
 				R.string.Set, false, new Ui.OnChangeListener<String>() {
 			@Override
-			public void onAction(String pData) {
-				int val = TextUtils.isEmpty(pData) ? 0 : Integer.parseInt(pData);
+			public void onAction(String data) {
+				int val = TextUtils.isEmpty(data) ? 0 : Integer.parseInt(data);
 				sendCommand(String.format("2,%d,%d", fn, val), CarGroupFragment.this);
 				mAdapter.setFeature(fn, val);
 			}

@@ -90,11 +90,11 @@ public class ControlFragment extends BaseFragment implements OnClickListener,
 			Ui.showEditDialog(v.getContext(), getString(R.string.msg_mmi_ssd_code),
 					"*100#", R.string.Send, false, new Ui.OnChangeListener<String>() {
 						@Override
-						public void onAction(String pData) {
+						public void onAction(String data) {
 
-							if (TextUtils.isEmpty(pData))
+							if (TextUtils.isEmpty(data))
 								return;
-							ussdCmd = pData;
+							ussdCmd = data;
 
 							Context context = getActivity();
 
@@ -111,7 +111,7 @@ public class ControlFragment extends BaseFragment implements OnClickListener,
 								context.sendBroadcast(uiNotify);
 							}
 
-							sendCommand(R.string.lb_mmi_ussd_code, "41," + pData, ControlFragment.this);
+							sendCommand(R.string.lb_mmi_ussd_code, "41," + data, ControlFragment.this);
 						}
 					});
 		} else if (id == R.id.btn_features) {

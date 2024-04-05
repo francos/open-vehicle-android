@@ -100,9 +100,9 @@ public class ControlParametersFragment extends BaseFragment implements OnResultC
 			Ui.showEditDialog(context, mAdapter.getTitleRow(context, position), val,
 					R.string.Set, isPasswd, new Ui.OnChangeListener<String>() {
 						@Override
-						public void onAction(String pData) {
-						sendCommand(String.format("4,%d,%s", fn, pData), ControlParametersFragment.this);
-						mAdapter.setParam(fn, pData);
+						public void onAction(String data) {
+						sendCommand(String.format("4,%d,%s", fn, data), ControlParametersFragment.this);
+						mAdapter.setParam(fn, data);
 						}
 					});
 		}

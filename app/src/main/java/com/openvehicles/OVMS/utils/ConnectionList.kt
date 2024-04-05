@@ -38,7 +38,7 @@ class ConnectionList(
         this.listener = listener
         main = Main(context)
         database = Database(context)
-        if (database._ConnectionTypes_Main.count == 0 && mayFetch) {
+        if (database.getConnectionTypesMain().count == 0 && mayFetch) {
             connectionListLoader = ConnectionListLoader()
             connectionListLoader!!.execute()
         } else {
@@ -75,7 +75,8 @@ class ConnectionList(
             for (i in 0 until len) {
                 if (checked[i]) {
                     database.updateConnectionTypesDetail(
-                        hList[i]["ID"], "true",
+                        hList[i]["ID"],
+                        "true",
                         selVehicleLabel
                     )
                     if (tid == "") {
@@ -106,7 +107,7 @@ class ConnectionList(
             "ConnectionList", "getlist: sel_vehicle_label="
                     + appPrefes.getData("sel_vehicle_label")
         )
-        var cursor = database.get_ConnectionTypesdetails(
+        var cursor = database.getConnectionTypesDetails(
             appPrefes.getData("sel_vehicle_label")
         )
         if (cursor.count != 0) {
@@ -130,7 +131,7 @@ class ConnectionList(
             }
         } else {
             cursor.close()
-            cursor = database._ConnectionTypes_Main
+            cursor = database.getConnectionTypesMain()
             while (cursor.moveToNext()) {
                 al.add(cursor.getString(cursor.getColumnIndex("title")))
                 alId.add(cursor.getString(cursor.getColumnIndex("tId")))
@@ -147,7 +148,7 @@ class ConnectionList(
             alId.clear()
             alCheck.clear()
             hList.clear()
-            val cursor1 = database.get_ConnectionTypesdetails(
+            val cursor1 = database.getConnectionTypesDetails(
                 appPrefes
                     .getData("sel_vehicle_label")
             )
@@ -212,7 +213,7 @@ class ConnectionList(
         override fun onPostExecute(result: Void?) {
             database.beginWrite()
             for (i in al.indices) {
-                database.addConnectionTypes_Main("" + i, alId[i], al[i])
+                database.addConnectionTypesMain("" + i, alId[i], al[i])
             }
             database.endWrite(true)
             database.close()

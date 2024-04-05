@@ -1,13 +1,25 @@
-package com.openvehicles.OVMS.ui.utils;
+package com.openvehicles.OVMS.ui.utils
 
-import com.google.android.gms.maps.model.LatLng;
+import com.androidmapsextensions.GoogleMap
+import com.androidmapsextensions.MarkerOptions
+import com.google.android.gms.maps.model.LatLng
 
-import com.androidmapsextensions.GoogleMap;
-import com.androidmapsextensions.MarkerOptions;
+object MarkerGenerator {
 
-public class MarkerGenerator {
-	public static void addMarkers(GoogleMap map, String title, String snippet, LatLng latlng, String cpid) {
-		MarkerOptions options = new MarkerOptions();
-		map.addMarker(options.title(title).snippet(snippet).position(latlng).data(cpid));
-	}
+    @JvmStatic
+    fun addMarkers(
+        map: GoogleMap,
+        title: String?,
+        snippet: String?,
+        latLng: LatLng?,
+        cpId: String?
+    ) {
+        map.addMarker(
+            MarkerOptions()
+                .title(title)
+                .snippet(snippet)
+                .position(latLng)
+                .data(cpId)
+        )
+    }
 }

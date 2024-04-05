@@ -440,10 +440,10 @@ public class InfoFragment extends BaseFragment implements OnClickListener,
 		SwitcherView sw = (SwitcherView) content.findViewById(R.id.sv_state);
 		sw.setOnChangeListener(new OnChangeListener<SwitcherView>() {
 			@Override
-			public void onAction(SwitcherView pData) {
-				TextView txtInfo = (TextView) ((View) pData.getParent())
+			public void onAction(SwitcherView data) {
+				TextView txtInfo = (TextView) ((View) data.getParent())
 						.findViewById(R.id.txt_info);
-				switch (pData.getSelected()) {
+				switch (data.getSelected()) {
 				case 2:
 					txtInfo.setText(R.string.msg_charger_range);
 					break;

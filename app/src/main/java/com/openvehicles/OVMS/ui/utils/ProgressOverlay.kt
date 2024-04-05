@@ -1,123 +1,119 @@
-package com.openvehicles.OVMS.ui.utils;
+package com.openvehicles.OVMS.ui.utils
 
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.LinearLayout;
-import android.widget.ProgressBar;
-import android.widget.TextView;
-
-import com.openvehicles.OVMS.R;
+import android.view.LayoutInflater
+import android.view.View
+import android.view.View.GONE
+import android.view.View.VISIBLE
+import android.view.ViewGroup
+import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.TextView
+import com.openvehicles.OVMS.R
 
 /**
  * ProgressOverlay: create and manage a progress_layer view
  */
-public class ProgressOverlay implements View.OnClickListener {
-	private static final String TAG = "ProgressOverlay";
+class ProgressOverlay(
+    inflater: LayoutInflater,
+    rootView: ViewGroup
+) : View.OnClickListener {
 
-	private LinearLayout mProgressLayer;
-	private TextView mProgressLabel;
-	private ProgressBar mProgressBarStep;
-	private ProgressBar mProgressBarSubStep;
-	private ProgressBar mProgressBarIndeterminate;
-	private Button mProgressCancel;
+    private val progressLayer: LinearLayout
+    private val progressLabel: TextView
+    private val progressBarStep: ProgressBar
+    private val progressBarSubStep: ProgressBar
+    private val progressBarIndeterminate: ProgressBar
+    private val progressCancel: Button
 
-	public interface OnCancelListener {
-		public void onProgressCancel();
-	}
-	private OnCancelListener mListener;
+    private var listener: OnCancelListener? = null
 
+    val isVisible: Boolean
+        get() = progressLayer.visibility == VISIBLE
 
-	public ProgressOverlay(LayoutInflater inflater, ViewGroup rootView) {
+    init {
+        progressLayer = inflater.inflate(R.layout.progress_layer, rootView, false) as LinearLayout
+        progressLabel = progressLayer.findViewById<View>(R.id.progress_label) as TextView
+        progressBarStep =
+            progressLayer.findViewById<View>(R.id.progress_bar_determinate) as ProgressBar
+        progressBarSubStep =
+            progressLayer.findViewById<View>(R.id.progress_bar_substep) as ProgressBar
+        progressBarIndeterminate =
+            progressLayer.findViewById<View>(R.id.progress_bar_indeterminate) as ProgressBar
+        progressCancel = progressLayer.findViewById<View>(R.id.progress_cancel) as Button
+        progressCancel.setOnClickListener(this)
+        hide()
+        rootView.addView(progressLayer)
+    }
 
-		mProgressLayer = (LinearLayout) inflater.inflate(R.layout.progress_layer, rootView, false);
-		mProgressLabel = (TextView) mProgressLayer.findViewById(R.id.progress_label);
+    // set label from resource:
+    fun setLabel(resId: Int) {
+        progressLabel.setText(resId)
+    }
 
-		mProgressBarStep = (ProgressBar) mProgressLayer.findViewById(R.id.progress_bar_determinate);
-		mProgressBarSubStep = (ProgressBar) mProgressLayer.findViewById(R.id.progress_bar_substep);
-		mProgressBarIndeterminate = (ProgressBar) mProgressLayer.findViewById(R.id.progress_bar_indeterminate);
+    // set label from string:
+    fun setLabel(text: String?) {
+        progressLabel.text = text
+    }
 
-		mProgressCancel = (Button) mProgressLayer.findViewById(R.id.progress_cancel);
-		mProgressCancel.setOnClickListener(this);
+    // show indeterminate progress spinner icon:
+    fun show() {
+        progressBarStep.visibility = GONE
+        progressBarSubStep.visibility = GONE
+        progressBarIndeterminate.visibility = VISIBLE
+        progressCancel.visibility = if (listener != null) VISIBLE else GONE
+        progressLayer.bringToFront()
+        progressLayer.visibility = VISIBLE
+    }
 
-		hide();
+    // show determinate progress bar:
+    //   closes if pos == maxPos
+    //   shows sub step bar if step < stepCnt
+    fun step(pos: Int, maxPos: Int, step: Int, stepCnt: Int) {
+        if (maxPos > 0 && pos == maxPos) {
+            hide()
+        } else {
+            progressBarStep.setMax(maxPos)
+            progressBarStep.progress = pos
+            progressBarStep.visibility = VISIBLE
+            if (step < stepCnt) {
+                progressBarSubStep.setMax(stepCnt)
+                progressBarSubStep.progress = step
+                progressBarSubStep.visibility = VISIBLE
+            } else {
+                progressBarSubStep.visibility = GONE
+            }
+            progressBarIndeterminate.visibility = GONE
+            progressCancel.visibility = if (listener != null) VISIBLE else GONE
+            progressLayer.bringToFront()
+            progressLayer.visibility = VISIBLE
+        }
+    }
 
-		rootView.addView(mProgressLayer);
-	}
+    // hide:
+    fun hide() {
+        progressBarStep.visibility = GONE
+        progressBarSubStep.visibility = GONE
+        progressBarIndeterminate.visibility = GONE
+        progressCancel.visibility = GONE
+        progressLayer.visibility = GONE
+    }
 
-	// set label from resource:
-	public void setLabel(int resId) {
-		mProgressLabel.setText(resId);
-	}
+    fun setOnCancelListener(listener: OnCancelListener?) {
+        this.listener = listener
+    }
 
-	// set label from string:
-	public void setLabel(String text) {
-		mProgressLabel.setText(text);
-	}
+    override fun onClick(view: View) {
+        if (view.id == R.id.progress_cancel && listener != null) {
+            listener!!.onProgressCancel()
+        }
+    }
 
-	// show indeterminate progress spinner icon:
-	public void show() {
-		mProgressBarStep.setVisibility(View.GONE);
-		mProgressBarSubStep.setVisibility(View.GONE);
-		mProgressBarIndeterminate.setVisibility(View.VISIBLE);
+    /*
+     * Inner types
+     */
 
-		mProgressCancel.setVisibility((mListener != null) ? View.VISIBLE : View.GONE);
-		mProgressLayer.bringToFront();
-		mProgressLayer.setVisibility(View.VISIBLE);
-	}
-
-	// show determinate progress bar:
-	//   closes if pos == maxPos
-	//   shows sub step bar if step < stepCnt
-	public void step(int pos, int maxPos, int step, int stepCnt) {
-		if (maxPos > 0 && pos == maxPos) {
-			hide();
-		}
-		else {
-			mProgressBarStep.setMax(maxPos);
-			mProgressBarStep.setProgress(pos);
-			mProgressBarStep.setVisibility(View.VISIBLE);
-
-			if (step < stepCnt) {
-				mProgressBarSubStep.setMax(stepCnt);
-				mProgressBarSubStep.setProgress(step);
-				mProgressBarSubStep.setVisibility(View.VISIBLE);
-			} else {
-				mProgressBarSubStep.setVisibility(View.GONE);
-			}
-
-			mProgressBarIndeterminate.setVisibility(View.GONE);
-
-			mProgressCancel.setVisibility((mListener != null) ? View.VISIBLE : View.GONE);
-			mProgressLayer.bringToFront();
-			mProgressLayer.setVisibility(View.VISIBLE);
-		}
-	}
-
-	// hide:
-	public void hide() {
-		mProgressBarStep.setVisibility(View.GONE);
-		mProgressBarSubStep.setVisibility(View.GONE);
-		mProgressBarIndeterminate.setVisibility(View.GONE);
-		mProgressCancel.setVisibility(View.GONE);
-		mProgressLayer.setVisibility(View.GONE);
-	}
-
-	public boolean isVisible() {
-		return (mProgressLayer.getVisibility() == View.VISIBLE);
-	}
-
-
-	public void setOnCancelListener(OnCancelListener listener) {
-		mListener = listener;
-	}
-
-	@Override
-	public void onClick(View view) {
-		if (view.getId() == R.id.progress_cancel && mListener != null) {
-			mListener.onProgressCancel();
-		}
-	}
-
+    interface OnCancelListener {
+        fun onProgressCancel()
+    }
 }

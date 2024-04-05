@@ -774,7 +774,7 @@ public class MainActivity extends ApiActivity implements
 		int latitude = (int) center.latitude;
 		int longitude = (int) center.longitude;
 
-		Cursor cursor = database.getlatlngdetail(latitude, longitude);
+		Cursor cursor = database.getLatLngDetail(latitude, longitude);
 		int colLastUpdate = cursor.getColumnIndex("last_update");
 		if (cursor.getCount() == 0) {
 			cursor.close();
@@ -846,7 +846,7 @@ public class MainActivity extends ApiActivity implements
 		if (success) {
 			// mark cache tile valid:
 			Log.i(TAG, "getMapDetailsDone: OCM updates received for " + center);
-			database.addlatlngdetail((int)center.latitude, (int)center.longitude);
+			database.addLatLngDetail((int)center.latitude, (int)center.longitude);
 			// update map:
 			FragMap frg = (FragMap) mPagerAdapter.getItemByTitle(R.string.Location);
 			if (frg != null) {

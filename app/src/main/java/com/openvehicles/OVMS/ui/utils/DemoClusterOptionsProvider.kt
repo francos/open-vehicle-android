@@ -13,80 +13,72 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.openvehicles.OVMS.ui.utils;
+package com.openvehicles.OVMS.ui.utils
 
-import java.util.List;
+import android.content.res.Resources
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Paint.Align
+import android.graphics.Rect
+import androidx.collection.LruCache
+import com.androidmapsextensions.ClusterOptions
+import com.androidmapsextensions.ClusterOptionsProvider
+import com.androidmapsextensions.Marker
+import com.google.android.gms.maps.model.BitmapDescriptor
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.openvehicles.OVMS.R
 
-import com.androidmapsextensions.ClusterOptions;
-import com.androidmapsextensions.ClusterOptionsProvider;
-import com.androidmapsextensions.Marker;
-import android.content.res.Resources;
-import android.graphics.Bitmap;
-import android.graphics.Bitmap.Config;
-import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.Paint.Align;
-import android.graphics.Rect;
-import androidx.collection.LruCache;
+class DemoClusterOptionsProvider(
+    resources: Resources
+) : ClusterOptionsProvider {
 
-import com.google.android.gms.maps.model.BitmapDescriptor;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
-import com.openvehicles.OVMS.R;
+    private val baseBitmaps: Array<Bitmap?> = arrayOfNulls(res.size)
+    private val cache = LruCache<Int, BitmapDescriptor>(128)
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val bounds = Rect()
+    private val clusterOptions = ClusterOptions().anchor(0.5f, 0.5f)
 
-public class DemoClusterOptionsProvider implements ClusterOptionsProvider {
+    init {
+        for (i in res.indices) {
+            baseBitmaps[i] = BitmapFactory.decodeResource(resources, res[i])
+        }
+        paint.setColor(Color.WHITE)
+        paint.textAlign = Align.CENTER
+        paint.textSize = resources.getDimension(R.dimen.text_size)
+    }
 
-	private static final int[] res = { R.drawable.m1, R.drawable.m2, R.drawable.m3, R.drawable.m4, R.drawable.m5 };
+    override fun getClusterOptions(markers: List<Marker>): ClusterOptions {
+        val markersCount = markers.size
+        val cachedIcon = cache[markersCount]
+        if (cachedIcon != null) {
+            return clusterOptions.icon(cachedIcon)
+        }
+        var base: Bitmap?
+        var i = 0
+        do {
+            base = baseBitmaps[i]
+        } while (markersCount >= forCounts[i++])
+        val bitmap = base!!.copy(Bitmap.Config.ARGB_8888, true)
+        val text = markersCount.toString()
+        paint.getTextBounds(text, 0, text.length, bounds)
+        val x = bitmap.getWidth() / 2.0f
+        val y = (bitmap.getHeight() - bounds.height()) / 2.0f - bounds.top
+        val canvas = Canvas(bitmap)
+        canvas.drawText(text, x, y, paint)
+        val icon = BitmapDescriptorFactory.fromBitmap(bitmap)
+        cache.put(markersCount, icon)
+        return clusterOptions.icon(icon)
+    }
 
-	private static final int[] forCounts = { 10, 100, 1000, 10000, Integer.MAX_VALUE };
+    /*
+     * Inner types
+     */
 
-	private Bitmap[] baseBitmaps;
-	private LruCache<Integer, BitmapDescriptor> cache = new LruCache<Integer, BitmapDescriptor>(128);
-
-	private Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-	private Rect bounds = new Rect();
-
-	private ClusterOptions clusterOptions = new ClusterOptions().anchor(0.5f, 0.5f);
-
-	public DemoClusterOptionsProvider(Resources resources) {
-		baseBitmaps = new Bitmap[res.length];
-		for (int i = 0; i < res.length; i++) {
-			baseBitmaps[i] = BitmapFactory.decodeResource(resources, res[i]);
-		}
-		paint.setColor(Color.WHITE);
-		paint.setTextAlign(Align.CENTER);
-		paint.setTextSize(resources.getDimension(R.dimen.text_size));
-	}
-
-	@Override
-	public ClusterOptions getClusterOptions(List<Marker> markers) {
-
-		int markersCount = markers.size();
-		BitmapDescriptor cachedIcon = cache.get(markersCount);
-		if (cachedIcon != null) {
-			return clusterOptions.icon(cachedIcon);
-		}
-
-		Bitmap base;
-		int i = 0;
-		do {
-			base = baseBitmaps[i];
-		} while (markersCount >= forCounts[i++]);
-
-		Bitmap bitmap = base.copy(Config.ARGB_8888, true);
-
-		String text = String.valueOf(markersCount);
-		paint.getTextBounds(text, 0, text.length(), bounds);
-		float x = bitmap.getWidth() / 2.0f;
-		float y = (bitmap.getHeight() - bounds.height()) / 2.0f - bounds.top;
-
-		Canvas canvas = new Canvas(bitmap);
-		canvas.drawText(text, x, y, paint);
-
-		BitmapDescriptor icon = BitmapDescriptorFactory.fromBitmap(bitmap);
-		cache.put(markersCount, icon);
-
-		return clusterOptions.icon(icon);
-	}
+    companion object {
+        private val res = intArrayOf(R.drawable.m1, R.drawable.m2, R.drawable.m3, R.drawable.m4, R.drawable.m5)
+        private val forCounts = intArrayOf(10, 100, 1000, 10000, Int.MAX_VALUE)
+    }
 }

@@ -271,15 +271,15 @@ public class CarFragment extends BaseFragment implements OnClickListener, OnResu
 			Ui.showPinDialog(getActivity(), dialogTitle, dialogButton, isPinEntry,
 					new Ui.OnChangeListener<String>() {
 						@Override
-						public void onAction(String pData) {
+						public void onAction(String data) {
 							String cmd;
 							int resId;
 							if (mCarData.car_locked) {
 								resId = dialogButton;
-								cmd = "22," + pData;
+								cmd = "22," + data;
 							} else {
 								resId = dialogButton;
-								cmd = "20," + pData;
+								cmd = "20," + data;
 							}
 							sendCommand(resId, cmd, CarFragment.this);
 						}
@@ -307,15 +307,15 @@ public class CarFragment extends BaseFragment implements OnClickListener, OnResu
 			Ui.showPinDialog(getActivity(), dialogTitle, dialogButton, isPinEntry,
 					new Ui.OnChangeListener<String>() {
 						@Override
-						public void onAction(String pData) {
+						public void onAction(String data) {
 							String cmd;
 							int resId;
 							if (mCarData.car_valetmode) {
 								resId = dialogButton;
-								cmd = "23," + pData;
+								cmd = "23," + data;
 							} else {
 								resId = dialogButton;
-								cmd = "21," + pData;
+								cmd = "21," + data;
 							}
 							sendCommand(resId, cmd, CarFragment.this);
 						}

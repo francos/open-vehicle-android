@@ -88,9 +88,9 @@ public class FeaturesFragment extends BaseFragment implements OnResultCommandLis
 				(String) mAdapter.getItem(position),
 				R.string.Set, false, new Ui.OnChangeListener<String>() {
 					@Override
-					public void onAction(String pData) {
-						sendCommand(String.format("2,%d,%s", fn, pData), FeaturesFragment.this);
-						mAdapter.setFeature(fn, pData);
+					public void onAction(String data) {
+						sendCommand(String.format("2,%d,%s", fn, data), FeaturesFragment.this);
+						mAdapter.setFeature(fn, data);
 					}
 				});
 		/*

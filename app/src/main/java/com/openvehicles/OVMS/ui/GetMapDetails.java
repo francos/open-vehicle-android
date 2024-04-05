@@ -81,11 +81,11 @@ public class GetMapDetails extends AsyncTask<Void, Void, Void> {
 		database.beginWrite();
 		int i;
 		for (i = 0; !isCancelled() && (i < chargePoints.size()); i++) {
-			database.insert_mapdetails(chargePoints.get(i));
+			database.insertMapDetails(chargePoints.get(i));
 		}
 		database.endWrite(true);
 		Log.d(TAG, "saved " + i + " chargepoints to database, lastUpdate="
-				+ database.get_DateLastStatusUpdate());
+				+ database.getDateLastStatusUpdate());
 
 		return null;
 	}
@@ -115,7 +115,7 @@ public class GetMapDetails extends AsyncTask<Void, Void, Void> {
 		// The API call will fetch a fixed radius of 160 km
 		// covering all adjacent tiles.
 		String maxresults = appPrefes.getData("maxresults");
-		String lastStatusUpdate = database.get_DateLastStatusUpdate(center);
+		String lastStatusUpdate = database.getDateLastStatusUpdate(center);
 
 		String url = "https://api.openchargemap.io/v2/poi/?output=json&verbose=false"
 				+ "&latitude=" + center.latitude
