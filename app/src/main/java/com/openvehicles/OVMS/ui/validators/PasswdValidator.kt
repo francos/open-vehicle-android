@@ -1,24 +1,20 @@
-package com.openvehicles.OVMS.ui.validators;
+package com.openvehicles.OVMS.ui.validators
 
-import android.widget.EditText;
+import android.widget.EditText
+import com.openvehicles.OVMS.R
 
-import com.openvehicles.OVMS.R;
+class PasswdValidator(
+    private val minLength: Int,
+    private val maxLength: Int
+) : StringValidator() {
 
-public class PasswdValidator extends StringValidator {
-	private final int mMinLength, mMaxLength;
-	
-	public PasswdValidator(int pMinLength, int pMaxLength) {
-		mMinLength = pMinLength;
-		mMaxLength = pMaxLength;
-	}
-	
-	@Override
-	public boolean valid(EditText pEditText, Object pValue) {
-		if (!super.valid(pEditText, pValue)) return false;
-		
-		setErrorMessage(pEditText.getContext().getString(R.string.msg_invalid_passwd, mMinLength, mMaxLength));
-		String name = (String) pValue;
-		return name.length() >= mMinLength && name.length() <= mMaxLength;		
-	}
-	
+    override fun valid(editText: EditText?, value: Any?): Boolean {
+        if (!super.valid(editText, value)) {
+            return false
+        }
+        errorMessage =
+            editText!!.context.getString(R.string.msg_invalid_passwd, minLength, maxLength)
+        val name = value as String?
+        return name!!.length >= minLength && name.length <= maxLength
+    }
 }

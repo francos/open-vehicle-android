@@ -1,24 +1,17 @@
-package com.openvehicles.OVMS.ui.validators;
+package com.openvehicles.OVMS.ui.validators
 
-import android.text.TextUtils;
-import android.widget.EditText;
+import android.text.TextUtils
+import android.widget.EditText
+import com.openvehicles.OVMS.R
 
-import com.openvehicles.OVMS.R;
+open class StringValidator(
+    override var errorMessage: String? = null
+) : Validator {
 
-public class StringValidator extends BaseValidator {
-
-	public StringValidator() {
-		super();
-	}
-	
-	public StringValidator(String string) {
-		super(string);
-	}
-
-	@Override
-	public boolean valid(EditText pEditText, Object pValue) {
-		if (mErrorMessage == null) setErrorMessage(pEditText.getContext().getString(R.string.msg_please_enter_value));
-		return !TextUtils.isEmpty((String)pValue);
-	}
-	
+    override fun valid(editText: EditText?, value: Any?): Boolean {
+        if (errorMessage == null) {
+            errorMessage = editText!!.context.getString(R.string.msg_please_enter_value)
+        }
+        return !TextUtils.isEmpty(value as String?)
+    }
 }

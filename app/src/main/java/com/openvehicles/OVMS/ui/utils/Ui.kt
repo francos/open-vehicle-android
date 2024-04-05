@@ -194,8 +194,8 @@ object Ui {
         val value = et.getText().toString()
         if (!validator.valid(et, value)) {
             et.requestFocus()
-            et.error = validator.getErrorMessage()
-            throw ValidationException(validator.getErrorMessage())
+            et.error = validator.errorMessage
+            throw ValidationException(validator.errorMessage)
         }
         return value
     }

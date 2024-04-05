@@ -163,14 +163,14 @@ public class CarEditorFragment extends BaseFragment {
 			mCarData.sel_vehicleid = Ui.getValidValue(rootView, R.id.txt_vehicle_id, 
 				new StringValidator() {
 					@Override
-					public boolean valid(EditText pEditText, Object pValue) {
-						if (!super.valid(pEditText, pValue)) return false;
-						setErrorMessage(pEditText.getContext().getString(R.string.msg_invalid_id_already_registered, pValue));
+					public boolean valid(EditText editText, Object value) {
+						if (!super.valid(editText, value)) return false;
+						setErrorMessage(editText.getContext().getString(R.string.msg_invalid_id_already_registered, value));
 						
 						List<CarData> mAllCars = CarsStorage.INSTANCE.getStoredCars();
 						int count = mAllCars.size();
 						for (int i=0; i<count; i++) {
-							if (mAllCars.get(i).sel_vehicleid.equals(pValue) && i != mEditPosition) {
+							if (mAllCars.get(i).sel_vehicleid.equals(value) && i != mEditPosition) {
 								return false;
 							}
 						}

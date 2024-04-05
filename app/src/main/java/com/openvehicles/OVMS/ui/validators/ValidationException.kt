@@ -1,9 +1,9 @@
-package com.openvehicles.OVMS.ui.validators;
+package com.openvehicles.OVMS.ui.validators
 
-public class ValidationException extends Exception {
-	private static final long serialVersionUID = 3736402563272470472L;
+class ValidationException(message: String?) : Exception(message) {
 
-	public ValidationException(String pMessage) {
-		super(pMessage);
-	}
+    companion object {
+        private const val serialVersionUID = 3736402563272470472L
+    }
+
 }

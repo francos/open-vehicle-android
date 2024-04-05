@@ -1,26 +1,30 @@
-package com.openvehicles.OVMS.ui.validators;
+package com.openvehicles.OVMS.ui.validators
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import android.widget.EditText
+import com.openvehicles.OVMS.R
+import java.util.regex.Pattern
 
-import android.widget.EditText;
+class UserNameValidator : StringValidator() {
 
-import com.openvehicles.OVMS.R;
+    override fun valid(editText: EditText?, value: Any?): Boolean {
+        if (!super.valid(editText, value)) {
+            return false
+        }
+        errorMessage = editText!!.context.getString(R.string.msg_invalid_name)
+        val name = value as String?
+        if (name!!.length < 3) {
+            return false
+        }
+        val pattern = Pattern.compile(NAME_PATERN)
+        val matcher = pattern.matcher(name)
+        return matcher.matches()
+    }
 
-public class UserNameValidator extends StringValidator {
-	private static final String NAME_PATERN = "(\\w+\\s*)+";
+    /*
+     * Inner types
+     */
 
-	@Override
-	public boolean valid(EditText pEditText, Object pValue) {
-		if (!super.valid(pEditText, pValue)) return false;
-		
-		setErrorMessage(pEditText.getContext().getString(R.string.msg_invalid_name));
-		String name = (String) pValue;
-		
-		if (name.length() < 3) return false;
-		Pattern pattern = Pattern.compile(NAME_PATERN);
-		Matcher matcher = pattern.matcher(name);
-		return matcher.matches();
-	}
-	
+    private companion object {
+        private const val NAME_PATERN = "(\\w+\\s*)+"
+    }
 }
