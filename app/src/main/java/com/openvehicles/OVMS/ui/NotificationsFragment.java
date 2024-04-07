@@ -39,7 +39,7 @@ import com.openvehicles.OVMS.R;
 import com.openvehicles.OVMS.api.ApiService;
 import com.openvehicles.OVMS.api.OnResultCommandListener;
 import com.openvehicles.OVMS.entities.CarData;
-import com.openvehicles.OVMS.utils.AppPrefes;
+import com.openvehicles.OVMS.utils.AppPrefs;
 import com.openvehicles.OVMS.ui.settings.StoredCommandFragment;
 import com.openvehicles.OVMS.ui.utils.Ui;
 import com.openvehicles.OVMS.utils.CarsStorage;
@@ -60,7 +60,7 @@ public class NotificationsFragment extends BaseFragment
 
 	private EditText mCmdInput;
 
-	private AppPrefes appPrefes;
+	private AppPrefs appPrefs;
 	public boolean mFontMonospace = false;
 	public boolean mFilterList = false, mFilterInfo = false, mFilterAlert = false;
 	public float mFontSize = 10;
@@ -72,18 +72,18 @@ public class NotificationsFragment extends BaseFragment
 	public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
 		// Load prefs:
-		appPrefes = new AppPrefes(requireActivity(), "ovms");
+		appPrefs = new AppPrefs(requireActivity(), "ovms");
 
-		mFontMonospace = appPrefes.getData("notifications_font_monospace").equals("on");
+		mFontMonospace = appPrefs.getData("notifications_font_monospace").equals("on");
 		try {
-			mFontSize = Float.parseFloat(appPrefes.getData("notifications_font_size"));
+			mFontSize = Float.parseFloat(appPrefs.getData("notifications_font_size"));
 		} catch(Exception e) {
 			mFontSize = 10;
 		}
 
-		mFilterList = appPrefes.getData("notifications_filter_list").equals("on");
-		mFilterInfo = appPrefes.getData("notifications_filter_info").equals("on");
-		mFilterAlert = appPrefes.getData("notifications_filter_alert").equals("on");
+		mFilterList = appPrefs.getData("notifications_filter_list").equals("on");
+		mFilterInfo = appPrefs.getData("notifications_filter_info").equals("on");
+		mFilterAlert = appPrefs.getData("notifications_filter_alert").equals("on");
 
 		// Create UI:
 
@@ -207,23 +207,23 @@ public class NotificationsFragment extends BaseFragment
 			return true;
 		} else if (menuId == R.id.mi_chk_filter_list) {
 			mFilterList = newState;
-			appPrefes.saveData("notifications_filter_list", newState ? "on" : "off");
+			appPrefs.saveData("notifications_filter_list", newState ? "on" : "off");
 			item.setChecked(newState);
 			initList();
 			return true;
 		} else if (menuId == R.id.mi_chk_filter_info) {
 			mFilterInfo = newState;
-			appPrefes.saveData("notifications_filter_info", newState ? "on" : "off");
+			appPrefs.saveData("notifications_filter_info", newState ? "on" : "off");
 			item.setChecked(newState);
 			return true;
 		} else if (menuId == R.id.mi_chk_filter_alert) {
 			mFilterAlert = newState;
-			appPrefes.saveData("notifications_filter_alert", newState ? "on" : "off");
+			appPrefs.saveData("notifications_filter_alert", newState ? "on" : "off");
 			item.setChecked(newState);
 			return true;
 		} else if (menuId == R.id.mi_chk_monospace) {
 			mFontMonospace = newState;
-			appPrefes.saveData("notifications_font_monospace", newState ? "on" : "off");
+			appPrefs.saveData("notifications_font_monospace", newState ? "on" : "off");
 			item.setChecked(newState);
 			mItemsAdapter.notifyDataSetChanged();
 			return true;
@@ -241,7 +241,7 @@ public class NotificationsFragment extends BaseFragment
 								val = 10;
 							}
 							mFontSize = val;
-							appPrefes.saveData("notifications_font_size",
+							appPrefs.saveData("notifications_font_size",
 									Float.toString(mFontSize));
 							mItemsAdapter.notifyDataSetChanged();
 							mCmdInput.setTextSize(TypedValue.COMPLEX_UNIT_SP, mFontSize * 1.2f);

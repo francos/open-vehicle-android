@@ -14,7 +14,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import com.google.gson.stream.JsonReader;
-import com.openvehicles.OVMS.utils.AppPrefes;
+import com.openvehicles.OVMS.utils.AppPrefs;
 import com.openvehicles.OVMS.Main;
 import com.openvehicles.OVMS.R;
 import com.openvehicles.OVMS.entities.ChargePoint;
@@ -28,7 +28,7 @@ public class GetMapDetails extends AsyncTask<Void, Void, Void> {
 
 	Context appContext;
 	Main main;
-	AppPrefes appPrefes;
+	AppPrefs appPrefs;
 	Database database;
 	LatLng center;
 	GetMapDetailsListener invoker;
@@ -44,7 +44,7 @@ public class GetMapDetails extends AsyncTask<Void, Void, Void> {
 	public GetMapDetails(Context context, LatLng center, GetMapDetailsListener invoker) {
 		appContext = context;
 		main = new Main(context);
-		appPrefes = new AppPrefes(context, "ovms");
+		appPrefs = new AppPrefs(context, "ovms");
 		database = new Database(context);
 		this.center = center;
 		this.invoker = invoker;
@@ -114,7 +114,7 @@ public class GetMapDetails extends AsyncTask<Void, Void, Void> {
 		// = diagonal max 159 km
 		// The API call will fetch a fixed radius of 160 km
 		// covering all adjacent tiles.
-		String maxresults = appPrefes.getData("maxresults");
+		String maxresults = appPrefs.getData("maxresults");
 		String lastStatusUpdate = database.getDateLastStatusUpdate(center);
 
 		String url = "https://api.openchargemap.io/v2/poi/?output=json&verbose=false"

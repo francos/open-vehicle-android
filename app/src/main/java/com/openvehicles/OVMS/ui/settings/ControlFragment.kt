@@ -1,212 +1,217 @@
-package com.openvehicles.OVMS.ui.settings;
+package com.openvehicles.OVMS.ui.settings
 
-import android.content.Context;
-import android.content.Intent;
-import android.os.Bundle;
-import android.text.TextUtils;
-import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.View.OnClickListener;
-import android.view.ViewGroup;
-import android.widget.Toast;
+import android.content.Context
+import android.content.Intent
+import android.os.Bundle
+import android.text.TextUtils
+import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import com.openvehicles.OVMS.R
+import com.openvehicles.OVMS.api.OnResultCommandListener
+import com.openvehicles.OVMS.entities.CarData
+import com.openvehicles.OVMS.ui.BaseFragment
+import com.openvehicles.OVMS.ui.BaseFragmentActivity
+import com.openvehicles.OVMS.ui.utils.Ui
+import com.openvehicles.OVMS.ui.utils.Ui.setOnClick
+import com.openvehicles.OVMS.ui.utils.Ui.showEditDialog
+import com.openvehicles.OVMS.utils.CarsStorage.getStoredCars
+import com.openvehicles.OVMS.utils.ConnectionList
+import com.openvehicles.OVMS.utils.ConnectionList.ConnectionsListener
+import com.openvehicles.OVMS.utils.NotificationData
+import com.openvehicles.OVMS.utils.OVMSNotifications
 
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
+class ControlFragment
+    : BaseFragment(), View.OnClickListener, OnResultCommandListener, ConnectionsListener {
 
-import com.openvehicles.OVMS.R;
-import com.openvehicles.OVMS.api.OnResultCommandListener;
-import com.openvehicles.OVMS.entities.CarData;
-import com.openvehicles.OVMS.ui.BaseFragment;
-import com.openvehicles.OVMS.ui.BaseFragmentActivity;
-import com.openvehicles.OVMS.ui.utils.Ui;
-import com.openvehicles.OVMS.utils.CarsStorage;
-import com.openvehicles.OVMS.utils.ConnectionList;
-import com.openvehicles.OVMS.utils.ConnectionList.ConnectionsListener;
-import com.openvehicles.OVMS.utils.NotificationData;
-import com.openvehicles.OVMS.utils.OVMSNotifications;
+    private var connectionList: ConnectionList? = null
+    private var editPosition = 0
+    private var carData: CarData? = null
+    private var ussdCmd: String? = null
+    private var ovmsNotifications: OVMSNotifications? = null
 
-public class ControlFragment extends BaseFragment implements OnClickListener,
-		OnResultCommandListener, ConnectionsListener {
-	ConnectionList connectionList;
-	private int mEditPosition;
-	private CarData mCarData;
-	private String ussdCmd;
-	private OVMSNotifications ovmsNotifications;
+    override fun onActivityCreated(savedInstanceState: Bundle?) {
+        super.onActivityCreated(savedInstanceState)
 
-	@Override
-	public void onActivityCreated(Bundle savedInstanceState) {
-		super.onActivityCreated(savedInstanceState);
-		AppCompatActivity activity = getCompatActivity();
+        // get data of car to edit:
+        editPosition = requireArguments().getInt("position", -1)
+        if (editPosition >= 0) {
+            carData = getStoredCars()[editPosition]
+        }
+        connectionList = ConnectionList(requireActivity(), this, false)
+        compatActivity.supportActionBar!!.setIcon(R.drawable.ic_action_control)
+        compatActivity.setTitle(R.string.Control)
+        val rootView = view
+        setOnClick(rootView!!, R.id.btn_features, this)
+        setOnClick(rootView, R.id.btn_parameters, this)
+        setOnClick(rootView, R.id.btn_mmi_ussd_code, this)
+        setOnClick(rootView, R.id.btn_connections, this)
+        setOnClick(rootView, R.id.btn_cellular_usage, this)
+        setOnClick(rootView, R.id.btn_reset_ovms_module, this)
 
-		// get data of car to edit:
-		mEditPosition = getArguments().getInt("position", -1);
-		if (mEditPosition >= 0) {
-			mCarData = CarsStorage.INSTANCE.getStoredCars().get(mEditPosition);
-		}
+        // diag logs only available on Renault Twizy (up to now):
+        if (carData!!.car_type == "RT") {
+            setOnClick(rootView, R.id.btn_diag_logs, this)
+        } else {
+            rootView.findViewById<View>(R.id.btn_diag_logs).visibility = View.GONE
+        }
+        ussdCmd = ""
+    }
 
-		connectionList = new ConnectionList(getActivity(), this, false);
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        return inflater.inflate(R.layout.fragment_control, null)
+    }
 
-		activity.getSupportActionBar().setIcon(R.drawable.ic_action_control);
-		activity.setTitle(R.string.Control);
+    override fun onDestroyView() {
+        cancelCommand()
+        super.onDestroyView()
+    }
 
-		View pRootView = getView();
-		Ui.setOnClick(pRootView, R.id.btn_features, this);
-		Ui.setOnClick(pRootView, R.id.btn_parameters, this);
-		Ui.setOnClick(pRootView, R.id.btn_mmi_ussd_code, this);
-		Ui.setOnClick(pRootView, R.id.btn_connections, this);
-		Ui.setOnClick(pRootView, R.id.btn_cellular_usage, this);
-		Ui.setOnClick(pRootView, R.id.btn_reset_ovms_module, this);
+    override fun onClick(view: View) {
+        val activity = activity as BaseFragmentActivity?
+        val args: Bundle
+        val id = view.id
+        when (id) {
+            R.id.btn_mmi_ussd_code -> {
+                showEditDialog(
+                    view.context,
+                    getString(R.string.msg_mmi_ssd_code),
+                    "*100#",
+                    R.string.Send,
+                    false,
+                    object : Ui.OnChangeListener<String?> {
 
-		// diag logs only available on Renault Twizy (up to now):
-		if (mCarData.car_type.equals("RT")) {
-			Ui.setOnClick(pRootView, R.id.btn_diag_logs, this);
-		} else {
-			pRootView.findViewById(R.id.btn_diag_logs).setVisibility(View.GONE);
-		}
+                        override fun onAction(data: String?) {
+                            if (TextUtils.isEmpty(data)) {
+                                return
+                            }
+                            ussdCmd = data
+                            val context: Context? = getActivity()
+                            if (ovmsNotifications == null) {
+                                ovmsNotifications = OVMSNotifications(context!!)
+                            }
+                            val isNew = ovmsNotifications!!.addNotification(
+                                NotificationData.TYPE_COMMAND,
+                                carData!!.sel_vehicleid + ": " + ussdCmd,
+                                ussdCmd
+                            )
+                            if (isNew) {
+                                // signal App to reload notifications:
+                                val uiNotify = Intent(context!!.packageName + ".Notification")
+                                context.sendBroadcast(uiNotify)
+                            }
+                            sendCommand(R.string.lb_mmi_ussd_code, "41,$data", this@ControlFragment)
+                        }
+                    })
+            }
+            R.id.btn_features -> {
+                args = Bundle()
+                args.putInt("position", editPosition)
+                activity!!.setNextFragment(FeaturesFragment::class.java, args)
+            }
+            R.id.btn_parameters -> {
+                args = Bundle()
+                args.putInt("position", editPosition)
+                activity!!.setNextFragment(ControlParametersFragment::class.java, args)
+            }
+            R.id.btn_reset_ovms_module -> {
+                sendCommand(R.string.msg_rebooting_car_module, "5", this)
+            }
+            R.id.btn_connections -> {
+                connectionList!!.sublist()
+            }
+            R.id.btn_cellular_usage -> {
+                activity!!.setNextFragment(CellularStatsFragment::class.java)
+            }
+            R.id.btn_diag_logs -> {
+                args = Bundle()
+                args.putInt("position", editPosition)
+                activity!!.setNextFragment(LogsFragment::class.java, args)
+            }
+        }
+    }
 
-		ussdCmd = "";
-	}
+    override fun onResultCommand(result: Array<String>) {
+        if (result.size < 2) {
+            return
+        }
+        if (context == null) {
+            return
+        }
+        val context: Context? = activity
+        val command = result[0].toInt()
+        val resCode = result[1].toInt()
+        val resText = if (result.size > 2) result[2] else ""
+        val cmdMessage = getSentCommandMessage(result[0])
 
-	@Override
-	public View onCreateView(LayoutInflater inflater, ViewGroup container,
-			Bundle savedInstanceState) {
-		return inflater.inflate(R.layout.fragment_control, null);
-	}
+        when (resCode) {
+            0 -> {
+                if (command == 41) {
+                    // only process second cmd result carrying data:
+                    if (result.size >= 3) {
+                        cancelCommand()
 
-	@Override
-	public void onDestroyView() {
-		cancelCommand();
-		super.onDestroyView();
-	}
+                        // add MMI/USSD result to Notifications:
+                        if (ovmsNotifications == null) ovmsNotifications = OVMSNotifications(context!!)
+                        val isNew = ovmsNotifications!!.addNotification(
+                            NotificationData.TYPE_USSD,
+                            carData!!.sel_vehicleid + ": " + ussdCmd,
+                            result[2]
+                        )
+                        if (isNew) {
+                            // signal App to reload notifications:
+                            val uiNotify = Intent(context!!.packageName + ".Notification")
+                            context.sendBroadcast(uiNotify)
 
-	@Override
-	public void onClick(View v) {
-		BaseFragmentActivity activity = (BaseFragmentActivity) getActivity();
-		Bundle args;
+                            // user info dialog:
+                            AlertDialog.Builder(context)
+                                .setTitle(cmdMessage)
+                                .setMessage("$ussdCmd =>\n${result[2]}")
+                                .setPositiveButton(android.R.string.ok, null)
+                                .show()
+                        }
+                    }
+                } else {
+                    // default:
+                    cancelCommand()
+                    Toast.makeText(
+                        context, cmdMessage + " => " + getString(R.string.msg_ok),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+            1 -> {
+                cancelCommand()
+                Toast.makeText(
+                    context, cmdMessage + " => " + getString(R.string.err_failed, resText),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            2 -> {
+                cancelCommand()
+                Toast.makeText(
+                    context, cmdMessage + " => " + getString(R.string.err_unsupported_operation),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            3 -> {
+                cancelCommand()
+                Toast.makeText(
+                    context, cmdMessage + " => " + getString(R.string.err_unimplemented_operation),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
 
-		int id = v.getId();
-		if (id == R.id.btn_mmi_ussd_code) {
-			Ui.showEditDialog(v.getContext(), getString(R.string.msg_mmi_ssd_code),
-					"*100#", R.string.Send, false, new Ui.OnChangeListener<String>() {
-						@Override
-						public void onAction(String data) {
-
-							if (TextUtils.isEmpty(data))
-								return;
-							ussdCmd = data;
-
-							Context context = getActivity();
-
-							if (ovmsNotifications == null)
-								ovmsNotifications = new OVMSNotifications(context);
-
-							boolean is_new = ovmsNotifications.addNotification(
-									NotificationData.TYPE_COMMAND,
-									mCarData.sel_vehicleid + ": " + ussdCmd,
-									ussdCmd);
-							if (is_new) {
-								// signal App to reload notifications:
-								Intent uiNotify = new Intent(context.getPackageName() + ".Notification");
-								context.sendBroadcast(uiNotify);
-							}
-
-							sendCommand(R.string.lb_mmi_ussd_code, "41," + data, ControlFragment.this);
-						}
-					});
-		} else if (id == R.id.btn_features) {
-			args = new Bundle();
-			args.putInt("position", mEditPosition);
-			activity.setNextFragment(FeaturesFragment.class, args);
-		} else if (id == R.id.btn_parameters) {
-			args = new Bundle();
-			args.putInt("position", mEditPosition);
-			activity.setNextFragment(ControlParametersFragment.class, args);
-		} else if (id == R.id.btn_reset_ovms_module) {
-			sendCommand(R.string.msg_rebooting_car_module, "5", this);
-		} else if (id == R.id.btn_connections) {
-			connectionList.sublist();
-		} else if (id == R.id.btn_cellular_usage) {
-			activity.setNextFragment(CellularStatsFragment.class);
-		} else if (id == R.id.btn_diag_logs) {
-			args = new Bundle();
-			args.putInt("position", mEditPosition);
-			activity.setNextFragment(LogsFragment.class, args);
-		}
-	}
-
-	@Override
-	public void onResultCommand(String[] result) {
-
-		if (result.length < 2)
-			return;
-		if (getContext() == null)
-			return;
-
-		Context context = getActivity();
-		int command = Integer.parseInt(result[0]);
-		int resCode = Integer.parseInt(result[1]);
-		String resText = (result.length > 2) ? result[2] : "";
-		String cmdMessage = getSentCommandMessage(result[0]);
-
-		switch (resCode) {
-			case 0: // ok
-
-				if (command == 41) {
-					// only process second cmd result carrying data:
-					if (result.length >= 3) {
-						cancelCommand();
-
-						// add MMI/USSD result to Notifications:
-						if (ovmsNotifications == null)
-							ovmsNotifications = new OVMSNotifications(context);
-
-						boolean is_new = ovmsNotifications.addNotification(
-								NotificationData.TYPE_USSD,
-								mCarData.sel_vehicleid + ": " + ussdCmd,
-								result[2]);
-						if (is_new) {
-
-							// signal App to reload notifications:
-							Intent uiNotify = new Intent(context.getPackageName() + ".Notification");
-							context.sendBroadcast(uiNotify);
-
-							// user info dialog:
-							new AlertDialog.Builder(context)
-									.setTitle(cmdMessage)
-									.setMessage(ussdCmd + " =>\n" + result[2])
-									.setPositiveButton(android.R.string.ok, null)
-									.show();
-						}
-					}
-				} else {
-					// default:
-					cancelCommand();
-					Toast.makeText(context, cmdMessage + " => " + getString(R.string.msg_ok),
-							Toast.LENGTH_SHORT).show();
-				}
-
-				break;
-			case 1: // failed
-				cancelCommand();
-				Toast.makeText(context, cmdMessage + " => " + getString(R.string.err_failed, resText),
-						Toast.LENGTH_SHORT).show();
-				break;
-			case 2: // unsupported
-				cancelCommand();
-				Toast.makeText(context, cmdMessage + " => " + getString(R.string.err_unsupported_operation),
-						Toast.LENGTH_SHORT).show();
-				break;
-			case 3: // unimplemented
-				cancelCommand();
-				Toast.makeText(context, cmdMessage + " => " + getString(R.string.err_unimplemented_operation),
-						Toast.LENGTH_SHORT).show();
-				break;
-		}
-	}
-
-	@Override
-	public void onConnectionChanged(String conId, String conName) {
-		Log.d("ControlFragment", "onConnectionChanged: conName=" + conName);
-	}
+    override fun onConnectionChanged(conId: String?, conName: String?) {
+        Log.d("ControlFragment", "onConnectionChanged: conName=$conName")
+    }
 }

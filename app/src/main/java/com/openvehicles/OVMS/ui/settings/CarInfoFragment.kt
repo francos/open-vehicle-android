@@ -1,115 +1,129 @@
-package com.openvehicles.OVMS.ui.settings;
+package com.openvehicles.OVMS.ui.settings
 
-import android.content.Context;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager.NameNotFoundException;
-import android.os.Bundle;
+import android.content.pm.PackageManager
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ImageView
+import android.widget.TextView
+import com.openvehicles.OVMS.R
+import com.openvehicles.OVMS.entities.CarData
+import com.openvehicles.OVMS.ui.BaseFragment
+import com.openvehicles.OVMS.ui.utils.Ui.getDrawableIdentifier
+import com.openvehicles.OVMS.ui.utils.Ui.setValue
+import com.openvehicles.OVMS.utils.CarsStorage.getSelectedCarData
+import com.openvehicles.OVMS.utils.CarsStorage.getStoredCars
 
-import androidx.appcompat.app.AppCompatActivity;
+class CarInfoFragment : BaseFragment() {
 
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.ImageView;
-import android.widget.TextView;
+    private var carData: CarData? = null
 
-import com.openvehicles.OVMS.R;
-import com.openvehicles.OVMS.entities.CarData;
-import com.openvehicles.OVMS.ui.BaseFragment;
-import com.openvehicles.OVMS.ui.utils.Ui;
-import com.openvehicles.OVMS.utils.CarsStorage;
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        return inflater.inflate(R.layout.fragment_car_info, null)
+    }
 
-public class CarInfoFragment extends BaseFragment {
-	private CarData mCarData;
+    override fun onActivityCreated(savedInstanceState: Bundle?) {
+        super.onActivityCreated(savedInstanceState)
 
-	@Override
-	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-		return inflater.inflate(R.layout.fragment_car_info, null);
-	}
-	
-	@Override
-	public void onActivityCreated(Bundle savedInstanceState) {
-		super.onActivityCreated(savedInstanceState);
-		AppCompatActivity activity = getCompatActivity();
-		
-		activity.getSupportActionBar().setIcon(R.drawable.ic_action_about);
-		activity.setTitle(R.string.lb_vehicle_info);
-		
-		int editPosition = getArguments().getInt("position", -1);
-		if (editPosition >= 0) {
-			mCarData = CarsStorage.INSTANCE.getStoredCars().get(editPosition);
-		} else {
-			mCarData = CarsStorage.INSTANCE.getSelectedCarData();
-		}
+        compatActivity.supportActionBar!!.setIcon(R.drawable.ic_action_about)
+        compatActivity.setTitle(R.string.lb_vehicle_info)
+        val editPosition = requireArguments().getInt("position", -1)
+        carData = if (editPosition >= 0) {
+            getStoredCars()[editPosition]
+        } else {
+            getSelectedCarData()
+        }
+        if (carData != null) {
+            approveCarData()
+        }
+    }
 
-		if (mCarData != null)
-			approveCarData();
-	}
-	
-	private void approveCarData() {
-		View rootView = getView();
-		Context context = rootView.getContext();
-		
-		Ui.setValue(rootView, R.id.txt_vehicle_id, mCarData.sel_vehicleid);
-		Ui.setValue(rootView, R.id.txt_win, mCarData.car_vin);
-		Ui.setValue(rootView, R.id.txt_type, mCarData.car_type);
-		Ui.setValue(rootView, R.id.txt_server, mCarData.server_firmware);
-		Ui.setValue(rootView, R.id.txt_car, mCarData.car_firmware);
-		Ui.setValue(rootView, R.id.txt_hardware, mCarData.car_hardware);
-		Ui.setValue(rootView, R.id.txt_gsm, mCarData.car_gsm_signal);
-		Ui.setValue(rootView, R.id.txt_cac, (mCarData.car_CAC_percent > 0)
-				? String.format("%.2f Ah = %.1f%%", mCarData.car_CAC, mCarData.car_CAC_percent)
-				: String.format("%.2f Ah",mCarData.car_CAC));
-		Ui.setValue(rootView, R.id.txt_soh, String.format("%.1f%%", mCarData.car_soh));
+    private fun approveCarData() {
+        val rootView = view
+        val context = rootView!!.context
+        setValue(rootView, R.id.txt_vehicle_id, carData!!.sel_vehicleid)
+        setValue(rootView, R.id.txt_win, carData!!.car_vin)
+        setValue(rootView, R.id.txt_type, carData!!.car_type)
+        setValue(rootView, R.id.txt_server, carData!!.server_firmware)
+        setValue(rootView, R.id.txt_car, carData!!.car_firmware)
+        setValue(rootView, R.id.txt_hardware, carData!!.car_hardware)
+        setValue(rootView, R.id.txt_gsm, carData!!.car_gsm_signal)
+        setValue(
+            rootView,
+            R.id.txt_cac,
+            if (carData!!.car_CAC_percent > 0) String.format(
+                "%.2f Ah = %.1f%%",
+                carData!!.car_CAC,
+                carData!!.car_CAC_percent
+            ) else String.format("%.2f Ah", carData!!.car_CAC)
+        )
+        setValue(rootView, R.id.txt_soh, String.format("%.1f%%", carData!!.car_soh))
+        setValue(
+            rootView, R.id.txt_12v_info, String.format(
+                "%.1fV (%s) %.1fA",
+                carData!!.car_12vline_voltage,
+                if (carData!!.car_charging_12v) "charging" else if (carData!!.car_12vline_ref <= 1.5) String.format(
+                    "calmdown, %d min left",
+                    15 - (carData!!.car_12vline_ref * 10).toInt()
+                ) else String.format("ref=%.1fV", carData!!.car_12vline_ref),
+                carData!!.car_12v_current
+            )
+        )
+        setValue(
+            rootView,
+            R.id.txt_charge_info,
+            String.format("%.1f kWh", carData!!.car_charge_kwhconsumed)
+        )
 
-		Ui.setValue(rootView, R.id.txt_12v_info, String.format("%.1fV (%s) %.1fA",
-			mCarData.car_12vline_voltage,
-			mCarData.car_charging_12v
-				? "charging"
-				: (mCarData.car_12vline_ref <= 1.5)
-					? String.format("calmdown, %d min left", 15 - (int)(mCarData.car_12vline_ref*10))
-					: String.format("ref=%.1fV", mCarData.car_12vline_ref),
-			mCarData.car_12v_current));
+        // Show known car service interval info:
+        var serviceInfo = ""
+        if (carData!!.car_servicerange >= 0) {
+            serviceInfo += String.format("%d km", carData!!.car_servicerange)
+        }
+        if (carData!!.car_servicetime >= 0) {
+            if (serviceInfo != "") {
+                serviceInfo += " / "
+            }
+            val now = System.currentTimeMillis() / 1000
+            val serviceDays = (carData!!.car_servicetime - now) / 86400
+            serviceInfo += String.format("%d days", serviceDays)
+        }
+        val serviceTextView = rootView.findViewById<View>(R.id.txt_service_info) as TextView
+        val serviceView = rootView.findViewById<View>(R.id.service_info) as TextView
+        if (serviceInfo == "") {
+            serviceView.visibility = View.GONE
+            serviceTextView.visibility = View.GONE
+        } else {
+            serviceView.visibility = View.VISIBLE
+            serviceTextView.visibility = View.VISIBLE
+            serviceTextView.text = serviceInfo
+        }
+        val iv = rootView.findViewById<View>(R.id.img_signal_rssi) as ImageView
+        iv.setImageResource(
+            getDrawableIdentifier(
+                context,
+                "signal_strength_" + carData!!.car_gsm_bars
+            )
+        )
 
-		Ui.setValue(rootView, R.id.txt_charge_info, String.format("%.1f kWh", mCarData.car_charge_kwhconsumed));
+        try {
+            val pi = context.packageManager.getPackageInfo(context.packageName, 0)
+            setValue(
+                rootView,
+                R.id.txt_app,
+                String.format("%s (%s)", pi.versionName, pi.versionCode)
+            )
+        } catch (e: PackageManager.NameNotFoundException) {
+        }
+    }
 
-		// Show known car service interval info:
-		String serviceInfo = "";
-		if (mCarData.car_servicerange >= 0) {
-			serviceInfo += String.format("%d km", mCarData.car_servicerange);
-		}
-		if (mCarData.car_servicetime >= 0) {
-			if (!serviceInfo.equals("")) {
-				serviceInfo += " / ";
-			}
-			long now = System.currentTimeMillis() / 1000;
-			long serviceDays = (mCarData.car_servicetime - now) / 86400;
-			serviceInfo += String.format("%d days", serviceDays);
-		}
-		TextView serviceTextView = (TextView) rootView.findViewById(R.id.txt_service_info);
-		TextView serviceView = (TextView) rootView.findViewById(R.id.service_info);
-		if (serviceInfo.equals("")) {
-			serviceView.setVisibility(View.GONE);
-			serviceTextView.setVisibility(View.GONE);
-		} else {
-			serviceView.setVisibility(View.VISIBLE);
-			serviceTextView.setVisibility(View.VISIBLE);
-			serviceTextView.setText(serviceInfo);
-		}
-
-		ImageView iv = (ImageView)rootView.findViewById(R.id.img_signal_rssi);
-		iv.setImageResource(Ui.getDrawableIdentifier(context, "signal_strength_" + mCarData.car_gsm_bars));
-		
-		try {
-			PackageInfo pi = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
-			Ui.setValue(rootView, R.id.txt_app, String.format("%s (%s)", pi.versionName, pi.versionCode));
-		} catch (NameNotFoundException e) { }
-		
-	}
-	
-	@Override
-	public void update(CarData carData) {
-		mCarData = carData;
-		approveCarData();
-	}
+    override fun update(carData: CarData?) {
+        this.carData = carData
+        approveCarData()
+    }
 }

@@ -16,7 +16,7 @@ import com.openvehicles.OVMS.api.ApiObserver;
 import com.openvehicles.OVMS.api.ApiService;
 import com.openvehicles.OVMS.api.OnResultCommandListener;
 import com.openvehicles.OVMS.entities.CarData;
-import com.openvehicles.OVMS.utils.AppPrefes;
+import com.openvehicles.OVMS.utils.AppPrefs;
 import com.openvehicles.OVMS.ui.utils.Database;
 import com.openvehicles.OVMS.ui.utils.ProgressOverlay;
 import com.openvehicles.OVMS.utils.CarsStorage;
@@ -198,7 +198,7 @@ public class BaseFragment extends Fragment implements ApiObserver {
 	}
 
 	public void changeCar(CarData pCarData) {
-		AppPrefes prefs = new AppPrefes(getActivity(), "ovms");
+		AppPrefs prefs = new AppPrefs(getActivity(), "ovms");
 		Database database = new Database(getActivity());
 		Log.i(TAG, "changeCar: switching to vehicle ID " + pCarData.sel_vehicleid);
 

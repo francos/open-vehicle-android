@@ -25,7 +25,7 @@ import com.openvehicles.OVMS.R;
 import com.openvehicles.OVMS.api.OnResultCommandListener;
 import com.openvehicles.OVMS.entities.CarData;
 import com.openvehicles.OVMS.entities.CarData.DataStale;
-import com.openvehicles.OVMS.utils.AppPrefes;
+import com.openvehicles.OVMS.utils.AppPrefs;
 import com.openvehicles.OVMS.ui.settings.CarInfoFragment;
 import com.openvehicles.OVMS.ui.settings.FeaturesFragment;
 import com.openvehicles.OVMS.ui.settings.GlobalOptionsFragment;
@@ -39,14 +39,14 @@ public class CarFragment extends BaseFragment implements OnClickListener, OnResu
 	private CarData mCarData;
 	private String uiCarType = "";
 	Menu optionsMenu;
-	AppPrefes appPrefes;
+	AppPrefs appPrefs;
 
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
 		// init car data:
 		mCarData = CarsStorage.INSTANCE.getSelectedCarData();
-		appPrefes = new AppPrefes(getActivity(), "ovms");
+		appPrefs = new AppPrefs(getActivity(), "ovms");
 		
 		// inflate layout:
 		View rootView = inflater.inflate(R.layout.fragment_car, null);
@@ -147,9 +147,9 @@ public class CarFragment extends BaseFragment implements OnClickListener, OnResu
 
 		// set checkbox:
 		optionsMenu.findItem(R.id.mi_show_fahrenheit)
-				.setChecked(appPrefes.getData("showfahrenheit").equals("on"));
+				.setChecked(appPrefs.getData("showfahrenheit").equals("on"));
 		optionsMenu.findItem(R.id.mi_show_tpms_bar)
-				.setChecked(appPrefes.getData("showtpmsbar").equals("on"));
+				.setChecked(appPrefs.getData("showtpmsbar").equals("on"));
 
 		if (uiCarType.equals("RT")) {
 			// Menu setup for Renault Twizy:
@@ -196,12 +196,12 @@ public class CarFragment extends BaseFragment implements OnClickListener, OnResu
 					Configuration.ORIENTATION_UNDEFINED);
 			return true;
 		} else if (menuId == R.id.mi_show_fahrenheit) {
-			appPrefes.saveData("showfahrenheit", newState ? "on" : "off");
+			appPrefs.saveData("showfahrenheit", newState ? "on" : "off");
 			item.setChecked(newState);
 			triggerCarDataUpdate();
 			return true;
 		} else if (menuId == R.id.mi_show_tpms_bar) {
-			appPrefes.saveData("showtpmsbar", newState ? "on" : "off");
+			appPrefs.saveData("showtpmsbar", newState ? "on" : "off");
 			item.setChecked(newState);
 			triggerCarDataUpdate();
 			return true;

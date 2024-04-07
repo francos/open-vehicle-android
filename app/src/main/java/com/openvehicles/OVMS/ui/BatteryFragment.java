@@ -36,7 +36,7 @@ import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 import com.github.mikephil.charting.listener.OnChartValueSelectedListener;
 import com.github.mikephil.charting.highlight.Highlight;
 import com.github.mikephil.charting.formatter.ValueFormatter;
-import com.openvehicles.OVMS.utils.AppPrefes;
+import com.openvehicles.OVMS.utils.AppPrefs;
 import com.openvehicles.OVMS.R;
 import com.openvehicles.OVMS.entities.BatteryData;
 import com.openvehicles.OVMS.entities.CarData;
@@ -124,7 +124,7 @@ public class BatteryFragment
 
 	private CarData mCarData;
 	private CmdSeries cmdSeries;
-	private AppPrefes appPrefes;
+	private AppPrefs appPrefs;
 
 
 	@Override
@@ -137,10 +137,10 @@ public class BatteryFragment
 
 		// Load prefs:
 
-		appPrefes = new AppPrefes(getActivity(), "ovms");
+		appPrefs = new AppPrefs(getActivity(), "ovms");
 
-		mShowVolt = appPrefes.getData("battery_show_volt").equals("on");
-		mShowTemp = appPrefes.getData("battery_show_temp").equals("on");
+		mShowVolt = appPrefs.getData("battery_show_volt").equals("on");
+		mShowTemp = appPrefs.getData("battery_show_temp").equals("on");
 		if (!mShowVolt && !mShowTemp)
 			mShowVolt = true;
 
@@ -496,8 +496,8 @@ public class BatteryFragment
 	private void dataFilterChanged() {
 
 		// save prefs:
-		appPrefes.saveData("battery_show_volt", mShowVolt ? "on" : "off");
-		appPrefes.saveData("battery_show_temp", mShowTemp ? "on" : "off");
+		appPrefs.saveData("battery_show_volt", mShowVolt ? "on" : "off");
+		appPrefs.saveData("battery_show_temp", mShowTemp ? "on" : "off");
 
 		// check data status:
 		if (!isPackValid())

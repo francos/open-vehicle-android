@@ -96,13 +96,13 @@ object Ui {
         title: String?,
         value: String?,
         buttonResId: Int,
-        isPassvd: Boolean,
+        isPassword: Boolean,
         listener: OnChangeListener<String?>?
     ) {
         val view = LayoutInflater.from(context).inflate(R.layout.dlg_edit, null)
         val et = view.findViewById<View>(R.id.etxt_input_value) as EditText
         et.setText(value)
-        if (isPassvd) {
+        if (isPassword) {
             et.setHint(R.string.lb_enter_passwd)
             et.setRawInputType(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
             et.setTransformationMethod(PasswordTransformationMethod.getInstance())

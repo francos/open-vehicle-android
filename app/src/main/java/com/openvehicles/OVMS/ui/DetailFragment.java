@@ -13,7 +13,7 @@ import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 
-import com.openvehicles.OVMS.utils.AppPrefes;
+import com.openvehicles.OVMS.utils.AppPrefs;
 import com.openvehicles.OVMS.R;
 import com.openvehicles.OVMS.ui.utils.Database;
 import com.openvehicles.OVMS.ui.utils.Ui;
@@ -22,7 +22,7 @@ public class DetailFragment extends Fragment {
 
 	private String cpId, slat, slng;
 
-	AppPrefes appPrefes;
+	AppPrefs appPrefs;
 	Database database;
 
 	// TODO: Remove "@SuppressLint("Range")" and handle this properly
@@ -31,7 +31,7 @@ public class DetailFragment extends Fragment {
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,
 			Bundle savedInstanceState) {
 
-		appPrefes = new AppPrefes(getActivity(), "ovms");
+		appPrefs = new AppPrefs(getActivity(), "ovms");
 		database = new Database(getActivity());
 
 
@@ -161,8 +161,8 @@ public class DetailFragment extends Fragment {
 		// Create Google Maps intent from current location to target location
 
 		String directions = "https://maps.google.com/maps?saddr="
-				+ appPrefes.getData("lat_main") + ","
-				+ appPrefes.getData("lng_main") + "&daddr=" + slat + "," + slng;
+				+ appPrefs.getData("lat_main") + ","
+				+ appPrefs.getData("lng_main") + "&daddr=" + slat + "," + slng;
 
 		Intent intent = new Intent(android.content.Intent.ACTION_VIEW,
 				Uri.parse(directions));

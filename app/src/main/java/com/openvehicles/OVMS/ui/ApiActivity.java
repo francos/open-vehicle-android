@@ -14,7 +14,7 @@ import com.openvehicles.OVMS.api.ApiObservable;
 import com.openvehicles.OVMS.api.ApiObserver;
 import com.openvehicles.OVMS.api.ApiService;
 import com.openvehicles.OVMS.entities.CarData;
-import com.openvehicles.OVMS.utils.AppPrefes;
+import com.openvehicles.OVMS.utils.AppPrefs;
 import com.openvehicles.OVMS.ui.utils.Database;
 import com.openvehicles.OVMS.utils.CarsStorage;
 
@@ -132,7 +132,7 @@ public class ApiActivity extends AppCompatActivity implements ApiObserver {
 	}
 
 	public boolean changeCar(CarData pCarData) {
-		AppPrefes prefs = new AppPrefes(this, "ovms");
+		AppPrefs prefs = new AppPrefs(this, "ovms");
 		Database database = new Database(this);
 		Log.i(TAG, "changeCar: switching to vehicle ID " + pCarData.sel_vehicleid);
 

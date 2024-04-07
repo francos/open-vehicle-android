@@ -43,7 +43,7 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import com.openvehicles.OVMS.R;
 import com.openvehicles.OVMS.api.ApiService;
 import com.openvehicles.OVMS.entities.CarData;
-import com.openvehicles.OVMS.utils.AppPrefes;
+import com.openvehicles.OVMS.utils.AppPrefs;
 import com.openvehicles.OVMS.ui.FragMap.UpdateLocation;
 import com.openvehicles.OVMS.ui.GetMapDetails.GetMapDetailsListener;
 import com.openvehicles.OVMS.ui.utils.Database;
@@ -70,7 +70,7 @@ public class MainActivity extends ApiActivity implements
 	public String versionName = "";
 	public int versionCode = 0;
 
-	AppPrefes appPrefes;
+	AppPrefs appPrefs;
 	Database database;
 	public String uuid;
 
@@ -94,24 +94,24 @@ public class MainActivity extends ApiActivity implements
 		super.onCreate(savedInstanceState);
 		Log.d(TAG, "onCreate");
 
-		appPrefes = new AppPrefes(this, "ovms");
+		appPrefs = new AppPrefs(this, "ovms");
 		database = new Database(this);
 
 		// get/create App UUID:
-		uuid = appPrefes.getData("UUID");
+		uuid = appPrefs.getData("UUID");
 		if (uuid.length() == 0) {
 			uuid = UUID.randomUUID().toString();
-			appPrefes.saveData("UUID", uuid);
+			appPrefs.saveData("UUID", uuid);
 			Log.d(TAG, "onCreate: generated new UUID: " + uuid);
 		} else {
 			Log.d(TAG, "onCreate: using UUID: " + uuid);
 		}
 
 		// Check/create API key:
-		String apiKey = appPrefes.getData("APIKey");
+		String apiKey = appPrefs.getData("APIKey");
 		if (apiKey.length() == 0) {
 			apiKey = Sys.getRandomString(25);
-			appPrefes.saveData("APIKey", apiKey);
+			appPrefs.saveData("APIKey", apiKey);
 			Log.d(TAG, "onCreate: generated new APIKey: " + apiKey);
 		} else {
 			Log.d(TAG, "onCreate: using APIKey: " + apiKey);
@@ -123,7 +123,7 @@ public class MainActivity extends ApiActivity implements
 		updateLocation = this;
 		updatelocation();
 		// update connection list if OCM is enabled:
-		if (appPrefes.getData("option_ocm_enabled", "1").equals("1")) {
+		if (appPrefs.getData("option_ocm_enabled", "1").equals("1")) {
 			new ConnectionList(this,this,true);
 		}
 
@@ -219,7 +219,7 @@ public class MainActivity extends ApiActivity implements
 		database.close();
 
 		// Stop background ApiService?
-		boolean serviceEnabled = appPrefes.getData("option_service_enabled", "0").equals("1");
+		boolean serviceEnabled = appPrefs.getData("option_service_enabled", "0").equals("1");
 		if (!serviceEnabled) {
 			Log.i(TAG, "onDestroy: stopping ApiService");
 			stopService(new Intent(this, ApiService.class));
@@ -261,7 +261,7 @@ public class MainActivity extends ApiActivity implements
 			versionName = pinfo.versionName;
 			versionCode = pinfo.versionCode;
 
-			if (!appPrefes.getData("lastUsedVersionName", "").equals(versionName)) {
+			if (!appPrefs.getData("lastUsedVersionName", "").equals(versionName)) {
 				showVersion();
 			} else {
 				checkPlayServices();
@@ -286,7 +286,7 @@ public class MainActivity extends ApiActivity implements
 				.setTitle(getString(R.string.about_title, versionName, versionCode))
 				.setView(msg)
 				.setPositiveButton(R.string.msg_ok, (dialog1, which) ->
-						appPrefes.saveData("lastUsedVersionName", versionName))
+						appPrefs.saveData("lastUsedVersionName", versionName))
 				.setOnDismissListener(dialog12 -> checkPlayServices())
 				.show();
 	}
@@ -297,7 +297,7 @@ public class MainActivity extends ApiActivity implements
 	 */
 	private void checkPlayServices() {
 
-		if (appPrefes.getData("skipPlayServicesCheck", "0").equals("1"))
+		if (appPrefs.getData("skipPlayServicesCheck", "0").equals("1"))
 			return;
 
 		GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
@@ -309,7 +309,7 @@ public class MainActivity extends ApiActivity implements
 					.setMessage(R.string.play_services_recommended)
 					.setPositiveButton(R.string.remind, null)
 					.setNegativeButton(R.string.dontremind, (dialog1, which) ->
-							appPrefes.saveData("skipPlayServicesCheck", "1"))
+							appPrefs.saveData("skipPlayServicesCheck", "1"))
 					.setOnDismissListener(dialog12 -> checkPermissions())
 					.show();
 		} else {
@@ -741,15 +741,15 @@ public class MainActivity extends ApiActivity implements
 		String lat = "37.410866";
 		String lng = "-122.001946";
 
-		if (appPrefes.getData("lat_main").equals("")) {
+		if (appPrefs.getData("lat_main").equals("")) {
 			// init car position:
-			appPrefes.saveData("lat_main", lat);
-			appPrefes.saveData("lng_main", lng);
+			appPrefs.saveData("lat_main", lat);
+			appPrefs.saveData("lng_main", lng);
 			Log.i(TAG, "updatelocation: init car position");
 		} else {
 			// get current car position:
-			lat = appPrefes.getData("lat_main");
-			lng = appPrefes.getData("lng_main");
+			lat = appPrefs.getData("lat_main");
+			lng = appPrefs.getData("lng_main");
 		}
 
 		// Start OpenChargeMap task:
@@ -814,7 +814,7 @@ public class MainActivity extends ApiActivity implements
 			return;
 		}
 		// check if OCM has been disabled:
-		if (appPrefes.getData("option_ocm_enabled", "1").equals("0")) {
+		if (appPrefs.getData("option_ocm_enabled", "1").equals("0")) {
 			return;
 		}
 

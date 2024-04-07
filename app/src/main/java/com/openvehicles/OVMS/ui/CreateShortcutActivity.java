@@ -13,7 +13,7 @@ import androidx.core.graphics.drawable.IconCompat;
 
 import com.openvehicles.OVMS.R;
 import com.openvehicles.OVMS.api.CommandActivity;
-import com.openvehicles.OVMS.utils.AppPrefes;
+import com.openvehicles.OVMS.utils.AppPrefs;
 import com.openvehicles.OVMS.ui.settings.StoredCommandFragment;
 
 /**
@@ -47,7 +47,7 @@ public class CreateShortcutActivity extends Activity {
 			return;
 		}
 
-		AppPrefes appPrefes = new AppPrefes(this, "ovms");
+		AppPrefs appPrefs = new AppPrefs(this, "ovms");
 
 		long key = data.getLongExtra("key", 0);
 		String title = data.getStringExtra("title");
@@ -68,7 +68,7 @@ public class CreateShortcutActivity extends Activity {
 		intent = new Intent(appContext, CommandActivity.class);
 		intent.setAction("com.openvehicles.OVMS.action.COMMAND");
 		intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION|Intent.FLAG_ACTIVITY_NO_HISTORY|Intent.FLAG_ACTIVITY_NO_USER_ACTION);
-		intent.putExtra("apikey", appPrefes.getData("APIKey"));
+		intent.putExtra("apikey", appPrefs.getData("APIKey"));
 		intent.putExtras(data);
 
 		shortcut = new ShortcutInfoCompat.Builder(appContext, "StoredCommand_" + key)

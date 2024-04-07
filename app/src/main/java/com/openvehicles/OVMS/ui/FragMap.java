@@ -38,7 +38,7 @@ import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.Dot;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.PatternItem;
-import com.openvehicles.OVMS.utils.AppPrefes;
+import com.openvehicles.OVMS.utils.AppPrefs;
 import com.openvehicles.OVMS.R;
 import com.openvehicles.OVMS.entities.CarData;
 import com.openvehicles.OVMS.ui.GetMapDetails.GetMapDetailsListener;
@@ -63,7 +63,7 @@ public class FragMap extends BaseFragment implements OnInfoWindowClickListener,
 
 	Database database;
 	String slat, slng;
-	AppPrefes appPrefes;
+	AppPrefs appPrefs;
 
 	static boolean mapInitState = true;
 	boolean userInteraction = false;
@@ -123,9 +123,9 @@ public class FragMap extends BaseFragment implements OnInfoWindowClickListener,
 		int clusterSizeIndex = 0;
 
 		try {
-			clusterEnabled = !appPrefes.getData("check").equals("false");
-			clusterSizeIndex = Integer.parseInt(appPrefes.getData("progress"));
-			mapZoomLevel = Float.parseFloat(appPrefes.getData("mapZoomLevel"));
+			clusterEnabled = !appPrefs.getData("check").equals("false");
+			clusterSizeIndex = Integer.parseInt(appPrefs.getData("progress"));
+			mapZoomLevel = Float.parseFloat(appPrefs.getData("mapZoomLevel"));
 			if (mapZoomLevel == 0)
 				mapZoomLevel = 15;
 		} catch (Exception e) {
@@ -159,7 +159,7 @@ public class FragMap extends BaseFragment implements OnInfoWindowClickListener,
 				map.moveCamera(CameraUpdateFactory.newLatLng(carPosition));
 				Log.i(TAG, "getMap/onMyLocationButtonClick: enabling autotrack");
 				autotrack = true;
-				appPrefes.saveData("autotrack", "on");
+				appPrefs.saveData("autotrack", "on");
 				if (autoTrackMenuItem != null)
 					autoTrackMenuItem.setChecked(autotrack);
 				map.getUiSettings().setMyLocationButtonEnabled(!autotrack);
@@ -179,7 +179,7 @@ public class FragMap extends BaseFragment implements OnInfoWindowClickListener,
 				if (cameraPosition.zoom != 0 && cameraPosition.zoom != mapZoomLevel) {
 					userInteraction = true;
 					mapZoomLevel = cameraPosition.zoom;
-					appPrefes.saveData("mapZoomLevel", "" + mapZoomLevel);
+					appPrefs.saveData("mapZoomLevel", "" + mapZoomLevel);
 					Log.i(TAG, "getMap/onCameraChange: new mapZoomLevel=" + cameraPosition.zoom);
 				}
 				// disable autotrack?
@@ -191,7 +191,7 @@ public class FragMap extends BaseFragment implements OnInfoWindowClickListener,
 						if (moved > 300 * Math.pow(2, 15 - mapZoomLevel)) {
 							Log.i(TAG, "getMap/onCameraChange: moved " + moved + "m, disabling autotrack");
 							autotrack = false;
-							appPrefes.saveData("autotrack", "off");
+							appPrefs.saveData("autotrack", "off");
 							if (autoTrackMenuItem != null)
 								autoTrackMenuItem.setChecked(autotrack);
 							if (map.isMyLocationEnabled())
@@ -233,7 +233,7 @@ public class FragMap extends BaseFragment implements OnInfoWindowClickListener,
 		rootView = inflater.inflate(R.layout.mmap, null);
 		setHasOptionsMenu(true);
 
-		appPrefes = new AppPrefes(getActivity(), "ovms");
+		appPrefs = new AppPrefs(getActivity(), "ovms");
 		database = new Database(getActivity());
 
 		updateMap = this;
@@ -241,7 +241,7 @@ public class FragMap extends BaseFragment implements OnInfoWindowClickListener,
 		maxrange = 285;
 		distance_units = "KM";
 
-		autotrack = !appPrefes.getData("autotrack").equals("off");
+		autotrack = !appPrefs.getData("autotrack").equals("off");
 
 		mapInitState = true;
 
@@ -279,12 +279,12 @@ public class FragMap extends BaseFragment implements OnInfoWindowClickListener,
 		autoTrackMenuItem = optionsMenu.findItem(R.id.mi_map_autotrack);
 		autoTrackMenuItem.setChecked(autotrack);
 
-		if (appPrefes.getData("option_ocm_enabled", "1").equals("1")) {
+		if (appPrefs.getData("option_ocm_enabled", "1").equals("1")) {
 			optionsMenu.findItem(R.id.mi_map_filter_connections)
-					.setChecked(appPrefes.getData("filter").equals("on"))
+					.setChecked(appPrefs.getData("filter").equals("on"))
 					.setVisible(true);
 			optionsMenu.findItem(R.id.mi_map_filter_range)
-					.setChecked(appPrefes.getData("inrange").equals("on"))
+					.setChecked(appPrefs.getData("inrange").equals("on"))
 					.setVisible(true);
 		} else {
 			optionsMenu.findItem(R.id.mi_map_filter_connections)
@@ -301,7 +301,7 @@ public class FragMap extends BaseFragment implements OnInfoWindowClickListener,
 		boolean newState = !item.isChecked();
 
 		if (menuId == R.id.mi_map_autotrack) {
-			appPrefes.saveData("autotrack", newState ? "on" : "off");
+			appPrefs.saveData("autotrack", newState ? "on" : "off");
 			item.setChecked(newState);
 			autotrack = newState;
 			if (autotrack)
@@ -311,11 +311,11 @@ public class FragMap extends BaseFragment implements OnInfoWindowClickListener,
 				map.getUiSettings().setMyLocationButtonEnabled(!autotrack);
 			}
 		} else if (menuId == R.id.mi_map_filter_connections) {
-			appPrefes.saveData("filter", newState ? "on" : "off");
+			appPrefs.saveData("filter", newState ? "on" : "off");
 			item.setChecked(newState);
 			updateMapDetails(false);
 		} else if (menuId == R.id.mi_map_filter_range) {
-			appPrefes.saveData("inrange", newState ? "on" : "off");
+			appPrefs.saveData("inrange", newState ? "on" : "off");
 			item.setChecked(newState);
 			updateMapDetails(false);
 		} else if (menuId == R.id.mi_map_settings) {
@@ -406,9 +406,9 @@ public class FragMap extends BaseFragment implements OnInfoWindowClickListener,
 		boolean check_range = false;
 		double maxrange_m = 0;
 
-		if (appPrefes.getData("filter").equals("on")) {
+		if (appPrefs.getData("filter").equals("on")) {
 			// check if filter is defined, else fallback to all stations:
-			String connectionList = appPrefes.getData("Id");
+			String connectionList = appPrefs.getData("Id");
 			Log.d(TAG, "updateMapDetails: connectionList=(" + connectionList + ")");
 			if (!connectionList.equals(""))
 				cursor = database.getMapDetails(connectionList);
@@ -419,7 +419,7 @@ public class FragMap extends BaseFragment implements OnInfoWindowClickListener,
 			cursor = database.getMapDetails();
 		}
 
-		if (appPrefes.getData("inrange").equals("on")) {
+		if (appPrefs.getData("inrange").equals("on")) {
 			check_range = true;
 			if (distance_units.equals("Miles"))
 				maxrange_m = maxrange * 1.609344 * 1000;
@@ -557,8 +557,8 @@ public class FragMap extends BaseFragment implements OnInfoWindowClickListener,
 
 		// start chargepoint data update:
 
-		appPrefes.saveData("lat_main", "" + mCarData.car_latitude);
-		appPrefes.saveData("lng_main", "" + mCarData.car_longitude);
+		appPrefs.saveData("lat_main", "" + mCarData.car_latitude);
+		appPrefs.saveData("lng_main", "" + mCarData.car_longitude);
 
 		MainActivity.updateLocation.updatelocation();
 

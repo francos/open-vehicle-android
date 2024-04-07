@@ -10,7 +10,7 @@ import android.content.SharedPreferences
 /**
  * @author android
  */
-class AppPrefes(
+class AppPrefs(
     context: Context,
     prefName: String?
 ) {

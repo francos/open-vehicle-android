@@ -1,355 +1,395 @@
-package com.openvehicles.OVMS.ui.settings;
+package com.openvehicles.OVMS.ui.settings
 
-import android.content.Context;
-import android.os.Bundle;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemClickListener;
-import android.widget.BaseAdapter;
-import android.widget.ListView;
-import android.widget.TextView;
-import android.widget.Toast;
+import android.content.Context
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.AdapterView
+import android.widget.AdapterView.OnItemClickListener
+import android.widget.BaseAdapter
+import android.widget.ListView
+import android.widget.TextView
+import android.widget.Toast
+import com.openvehicles.OVMS.R
+import com.openvehicles.OVMS.api.ApiService
+import com.openvehicles.OVMS.api.OnResultCommandListener
+import com.openvehicles.OVMS.entities.CarData
+import com.openvehicles.OVMS.ui.BaseFragment
+import com.openvehicles.OVMS.ui.utils.Ui
+import com.openvehicles.OVMS.ui.utils.Ui.showEditDialog
+import com.openvehicles.OVMS.utils.CarsStorage.getStoredCars
 
-import androidx.fragment.app.FragmentActivity;
+class ControlParametersFragment : BaseFragment(), OnResultCommandListener, OnItemClickListener {
 
-import com.openvehicles.OVMS.R;
-import com.openvehicles.OVMS.api.ApiService;
-import com.openvehicles.OVMS.api.OnResultCommandListener;
-import com.openvehicles.OVMS.entities.CarData;
-import com.openvehicles.OVMS.ui.BaseFragment;
-import com.openvehicles.OVMS.ui.utils.Ui;
-import com.openvehicles.OVMS.utils.CarsStorage;
+    private var adapter: ControlParametersAdapter? = null
+    private var listView: ListView? = null
+    private var editPosition = 0
+    private var carData: CarData? = null
+    private var service: ApiService? = null
 
-public class ControlParametersFragment extends BaseFragment implements OnResultCommandListener, OnItemClickListener {
-	private ControlParametersAdapter mAdapter;
-	private ListView mListView;
-	private int mEditPosition;
-	private CarData mCarData;
-	private ApiService mService;
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        // get data of car to edit:
+        editPosition = requireArguments().getInt("position", -1)
+        if (editPosition >= 0) {
+            carData = getStoredCars()[editPosition]
+        }
+        listView = ListView(container!!.context)
+        listView!!.onItemClickListener = this
 
-	@Override
-	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        // create storage adapter:
+        adapter = ControlParametersAdapter()
+        listView!!.setAdapter(adapter)
+        createProgressOverlay(inflater, container, true)
+        return listView
+    }
 
-		// get data of car to edit:
-		mEditPosition = getArguments().getInt("position", -1);
-		if (mEditPosition >= 0) {
-			mCarData = CarsStorage.INSTANCE.getStoredCars().get(mEditPosition);
-		}
+    override fun onActivityCreated(savedInstanceState: Bundle?) {
+        super.onActivityCreated(savedInstanceState)
+        activity?.setTitle(R.string.Parameters)
+    }
 
-		mListView = new ListView(container.getContext());
-		mListView.setOnItemClickListener(this);
+    override fun onServiceAvailable(service: ApiService?) {
+        this.service = service
+        requestData()
+    }
 
-		// create storage adapter:
-		mAdapter = new ControlParametersAdapter();
-		mListView.setAdapter(mAdapter);
+    override fun update(carData: CarData?) {
+    }
 
-		createProgressOverlay(inflater, container, true);
+    private fun requestData() {
+        // send request:
+        showProgressOverlay()
+        service!!.sendCommand("3", this)
+    }
 
-		return mListView;
-	}
-	
-	@Override
-	public void onActivityCreated(Bundle savedInstanceState) {
-		super.onActivityCreated(savedInstanceState);
-		FragmentActivity activity = getActivity();
-		activity.setTitle(R.string.Parameters);
-	}
+    override fun onItemClick(parent: AdapterView<*>, view: View, position: Int, id: Long) {
+        val context = parent.context
+        val item = adapter!!.getItem(position) as String
+        val isPasswd = position == PARAM_REGPASS
+                || position == PARAM_NETPASS1
+                || position == PARAM_GPRSPASS
 
-	@Override
-	public void onServiceAvailable(ApiService service) {
-		mService = service;
-		requestData();
-	}
+        // Check content type:
+        var isBinary = false
+        if (carData!!.car_type == "RT"
+            && position >= PARAM_PROFILE1
+            && position <= PARAM_PROFILE3 + 1) {
+            isBinary = true
+        } else if (position in PARAM_ACC1..PARAM_ACC4) {
+            isBinary = true
+        }
+        if (isBinary) {
+            Toast.makeText(
+                activity, getString(R.string.err_param_not_editable),
+                Toast.LENGTH_SHORT
+            ).show()
+        } else {
+            showEditDialog(
+                context,
+                adapter!!.getTitleRow(context, position),
+                item,
+                R.string.Set,
+                isPasswd,
+                object : Ui.OnChangeListener<String?> {
+                    override fun onAction(data: String?) {
+                        sendCommand(
+                            String.format("4,%d,%s", position, data),
+                            this@ControlParametersFragment
+                        )
+                        adapter!!.setParam(position, data)
+                    }
+                })
+        }
+    }
 
-	@Override
-	public void update(CarData carData) {
-	}
+    override fun onResultCommand(result: Array<String>) {
+        if (result.size < 2) {
+            return
+        }
+        if (context == null) {
+            return
+        }
+        val command = result[0].toInt()
+        val resCode = result[1].toInt()
+        val resText = if (result.size > 2) result[2] else ""
+        if (command == 4) {
+            // Set parameter (single) response:
+            cancelCommand()
+            when (resCode) {
+                0 -> Toast.makeText(
+                    activity, getString(R.string.msg_ok),
+                    Toast.LENGTH_SHORT
+                ).show()
+                1 -> Toast.makeText(
+                    activity, getString(R.string.err_failed, resText),
+                    Toast.LENGTH_SHORT
+                ).show()
+                2 -> Toast.makeText(
+                    activity, getString(R.string.err_unsupported_operation),
+                    Toast.LENGTH_SHORT
+                ).show()
+                3 -> Toast.makeText(
+                    activity, getString(R.string.err_unimplemented_operation),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            return
+        }
+        if (command != 3) {
+            // Not for us
+            return
+        }
+        when (resCode) {
+            0 -> if (result.size >= 4) {
+                val fn = result[2].toInt()
+                val fm = result[3].toInt()
+                val fv = if (result.size > 4) result[4] else ""
+                stepProgressOverlay(fn + 1, fm)
+                if (fn < PARAM_FEATURE_S) {
+                    adapter!!.setParam(fn, fv)
+                }
+                if (fn == fm - 1) {
+                    // got all, cancel listening:
+                    cancelCommand()
+                }
+            }
+            1 -> {
+                Toast.makeText(
+                    activity, getString(R.string.err_failed, resText),
+                    Toast.LENGTH_SHORT
+                ).show()
+                cancelCommand()
+            }
+            2 -> {
+                Toast.makeText(
+                    activity, getString(R.string.err_unsupported_operation),
+                    Toast.LENGTH_SHORT
+                ).show()
+                cancelCommand()
+            }
+            3 -> {
+                Toast.makeText(
+                    activity, getString(R.string.err_unimplemented_operation),
+                    Toast.LENGTH_SHORT
+                ).show()
+                cancelCommand()
+            }
+        }
+    }
 
-	private void requestData() {
-		// send request:
-		showProgressOverlay();
-		mService.sendCommand("3", this);
-	}
+    /*
+     * Inner types
+     */
 
-	@Override
-	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-		Context context = parent.getContext();
-		final int fn = position;
-		final String val = (String)mAdapter.getItem(position);
-		boolean isPasswd = (position == ControlParametersAdapter.PARAM_REGPASS) ||
-				(position == ControlParametersAdapter.PARAM_NETPASS1) ||
-				(position == ControlParametersAdapter.PARAM_GPRSPASS);
+    private companion object {
 
-		// Check content type:
-		boolean isBinary = false;
-		if (mCarData.car_type.equals("RT")
-				&& position >= ControlParametersAdapter.PARAM_PROFILE1
-				&& position <= ControlParametersAdapter.PARAM_PROFILE3+1) {
-			isBinary = true;
-		} else if (position >= ControlParametersAdapter.PARAM_ACC1
-				&& position <= ControlParametersAdapter.PARAM_ACC4) {
-			isBinary = true;
-		}
+        //		private static final int PARAM_MAX		= 32;
+        //		private static final int PARAM_MAX_LENGTH = 32;
+        //		private static final int PARAM_BANKSIZE	= 8;
+        // Standard:
+        private const val PARAM_REGPHONE = 0x00
+        private const val PARAM_REGPASS = 0x01
+        private const val PARAM_MILESKM = 0x02
+        private const val PARAM_NOTIFIES = 0x03
+        private const val PARAM_SERVERIP = 0x04
+        private const val PARAM_GPRSAPN = 0x05
+        private const val PARAM_GPRSUSER = 0x06
+        private const val PARAM_GPRSPASS = 0x07
+        private const val PARAM_MYID = 0x08
+        private const val PARAM_NETPASS1 = 0x09
+        private const val PARAM_PARANOID = 0x0A
+        private const val PARAM_S_GROUP1 = 0x0B
+        private const val PARAM_S_GROUP2 = 0x0C
+        private const val PARAM_GSMLOCK = 0x0D
+        private const val PARAM_VEHICLETYPE = 0x0E
+        private const val PARAM_COOLDOWN = 0x0F
+        private const val PARAM_ACC1 = 0x10 // base64
+        private const val PARAM_ACC2 = 0x11 // base64
+        private const val PARAM_ACC3 = 0x12 // base64
+        private const val PARAM_ACC4 = 0x13 // base64
+        private const val PARAM_GPRSDNS = 0x16
+        private const val PARAM_TIMEZONE = 0x17
 
-		if (isBinary) {
-			Toast.makeText(getActivity(), getString(R.string.err_param_not_editable),
-					Toast.LENGTH_SHORT).show();
-		} else {
-			Ui.showEditDialog(context, mAdapter.getTitleRow(context, position), val,
-					R.string.Set, isPasswd, new Ui.OnChangeListener<String>() {
-						@Override
-						public void onAction(String data) {
-						sendCommand(String.format("4,%d,%s", fn, data), ControlParametersFragment.this);
-						mAdapter.setParam(fn, data);
-						}
-					});
-		}
-	}
-	
-	@Override
-	public void onResultCommand(String[] result) {
+        // Renault Twizy:
+        private const val PARAM_PROFILE = 0x0F // current cfg profile nr (0..3)
+        private const val PARAM_PROFILE1 = 0x10 // custom profile #1 (binary, 2 slots)
+        private const val PARAM_PROFILE2 = 0x12 // custom profile #2 (binary, 2 slots)
+        private const val PARAM_PROFILE3 = 0x14 // custom profile #3 (binary, 2 slots)
+        private const val PARAM_FEATURE_S = 0x18
 
-		if (result.length < 2)
-			return;
-		if (getContext() == null)
-			return;
+        //		private static final int PARAM_FEATURE8  = 0x18;
+        //		private static final int PARAM_FEATURE9  = 0x19;
+        //		private static final int PARAM_FEATURE10 = 0x1A;
+        //		private static final int PARAM_FEATURE11 = 0x1B;
+        //		private static final int PARAM_FEATURE12 = 0x1C;
+        //		private static final int PARAM_FEATURE13 = 0x1D;
+        //		private static final int PARAM_FEATURE14 = 0x1E;
+        //		private static final int PARAM_FEATURE15 = 0x1F;
+    }
 
-		int command = Integer.parseInt(result[0]);
-		int resCode = Integer.parseInt(result[1]);
-		String resText = (result.length > 2) ? result[2] : "";
+    private inner class ControlParametersAdapter : BaseAdapter() {
 
-		if (command == 4) {
-			// Set parameter (single) response:
-			cancelCommand();
-			switch (resCode) {
-			case 0:
-				Toast.makeText(getActivity(), getString(R.string.msg_ok),
-						Toast.LENGTH_SHORT).show();
-				break;
-			case 1: // failed
-				Toast.makeText(getActivity(), getString(R.string.err_failed, resText),
-						Toast.LENGTH_SHORT).show();
-				break;
-			case 2: // unsupported
-				Toast.makeText(getActivity(), getString(R.string.err_unsupported_operation),
-						Toast.LENGTH_SHORT).show();
-				break;
-			case 3: // unimplemented
-				Toast.makeText(getActivity(), getString(R.string.err_unimplemented_operation),
-						Toast.LENGTH_SHORT).show();
-				break;
-			}
-			return;
-		}
+        private var inflater: LayoutInflater? = null
+        private val params = arrayOfNulls<String>(PARAM_FEATURE_S)
 
-		if (command != 3) return; // Not for us
+        override fun getCount(): Int {
+            return PARAM_FEATURE_S
+        }
 
-		// Get parameter list (multiple) responses:
-		switch (resCode) {
-		case 0:
-			if (result.length >= 4) {
-				int fn = Integer.parseInt(result[2]);
-				int fm = Integer.parseInt(result[3]);
-				String fv = (result.length > 4) ? result[4] : "";
+        override fun getItem(position: Int): Any {
+            return params[position]!!
+        }
 
-				stepProgressOverlay(fn + 1, fm);
+        override fun getItemId(position: Int): Long {
+            return position.toLong()
+        }
 
-				if (fn < ControlParametersAdapter.PARAM_FEATURE_S) {
-					mAdapter.setParam(fn, fv);
-				}
-				
-				if (fn == (fm - 1)) {
-					// got all, cancel listening:
-					cancelCommand();
-				}
-			}
-			break;
-		case 1: // failed
-			Toast.makeText(getActivity(), getString(R.string.err_failed, resText),
-					Toast.LENGTH_SHORT).show();
-			cancelCommand();
-			break;
-		case 2: // unsupported
-			Toast.makeText(getActivity(), getString(R.string.err_unsupported_operation),
-					Toast.LENGTH_SHORT).show();
-			cancelCommand();
-			break;
-		case 3: // unimplemented
-			Toast.makeText(getActivity(), getString(R.string.err_unimplemented_operation),
-					Toast.LENGTH_SHORT).show();
-			cancelCommand();
-		}
-	}
-	
-	private class ControlParametersAdapter extends BaseAdapter {
-		//		private static final int PARAM_MAX		= 32;
-		//		private static final int PARAM_MAX_LENGTH = 32;
-		//		private static final int PARAM_BANKSIZE	= 8;
+        fun setParam(key: Int, value: String?) {
+            if (key > PARAM_FEATURE_S - 1) {
+                return
+            }
+            params[key] = value
+            notifyDataSetChanged()
+        }
 
-		// Standard:
-		static final int PARAM_REGPHONE  	= 0x00;
-		static final int PARAM_REGPASS   	= 0x01;
-		static final int PARAM_MILESKM   	= 0x02;
-		static final int PARAM_NOTIFIES  	= 0x03;
-		static final int PARAM_SERVERIP  	= 0x04;
-		static final int PARAM_GPRSAPN   	= 0x05;
-		static final int PARAM_GPRSUSER  	= 0x06;
-		static final int PARAM_GPRSPASS  	= 0x07;
-		static final int PARAM_MYID      	= 0x08;
-		static final int PARAM_NETPASS1  	= 0x09;
-		static final int PARAM_PARANOID  	= 0x0A;
-		static final int PARAM_S_GROUP1  	= 0x0B;
-		static final int PARAM_S_GROUP2  	= 0x0C;
-		static final int PARAM_GSMLOCK   	= 0x0D;
-		static final int PARAM_VEHICLETYPE  = 0x0E;
-		static final int PARAM_COOLDOWN   	= 0x0F;
-		static final int PARAM_ACC1   		= 0x10; // base64
-		static final int PARAM_ACC2   		= 0x11; // base64
-		static final int PARAM_ACC3   		= 0x12; // base64
-		static final int PARAM_ACC4   		= 0x13; // base64
-		static final int PARAM_GPRSDNS   	= 0x16;
-		static final int PARAM_TIMEZONE   	= 0x17;
+        fun getTitleRow(context: Context, position: Int): String {
+            // Renault Twizy:
+            if (carData!!.car_type == "RT") {
+                when (position) {
+                    PARAM_PROFILE -> return context.getString(
+                        R.string.lb_cp_rt_profile,
+                        position
+                    )
+                    PARAM_PROFILE1, PARAM_PROFILE1 + 1 -> return context.getString(
+                        R.string.lb_cp_rt_profile1,
+                        position
+                    )
+                    PARAM_PROFILE2, PARAM_PROFILE2 + 1 -> return context.getString(
+                        R.string.lb_cp_rt_profile2,
+                        position
+                    )
+                    PARAM_PROFILE3, PARAM_PROFILE3 + 1 -> return context.getString(
+                        R.string.lb_cp_rt_profile3,
+                        position
+                    )
+                    else -> {}
+                }
+            }
+            return when (position) {
+                PARAM_REGPHONE -> context.getString(
+                    R.string.lb_cp_registered_telephone,
+                    position
+                )
+                PARAM_REGPASS -> context.getString(
+                    R.string.lb_cp_module_password,
+                    position
+                )
+                PARAM_MILESKM -> context.getString(
+                    R.string.lb_cp_miles_km,
+                    position
+                )
+                PARAM_NOTIFIES -> context.getString(
+                    R.string.lb_cp_notifications,
+                    position
+                )
+                PARAM_SERVERIP -> context.getString(
+                    R.string.lb_cp_ovms_server_ip,
+                    position
+                )
+                PARAM_GPRSAPN -> context.getString(
+                    R.string.lb_cp_cellular_network_apn,
+                    position
+                )
+                PARAM_GPRSUSER -> context.getString(
+                    R.string.lb_cp_cellular_network_user,
+                    position
+                )
+                PARAM_GPRSPASS -> context.getString(
+                    R.string.lb_cp_cellular_network_password,
+                    position
+                )
+                PARAM_MYID -> context.getString(
+                    R.string.lb_cp_vehicle_id,
+                    position
+                )
+                PARAM_NETPASS1 -> context.getString(
+                    R.string.lb_cp_server_password,
+                    position
+                )
+                PARAM_PARANOID -> context.getString(
+                    R.string.lb_cp_paranoid_mode,
+                    position
+                )
+                PARAM_S_GROUP1 -> context.getString(
+                    R.string.lb_cp_social_group_1,
+                    position
+                )
+                PARAM_S_GROUP2 -> context.getString(
+                    R.string.lb_cp_social_group_2,
+                    position
+                )
+                PARAM_GSMLOCK -> context.getString(
+                    R.string.lb_cp_gsmlock,
+                    position
+                )
+                PARAM_VEHICLETYPE -> context.getString(
+                    R.string.lb_cp_vehicle_type,
+                    position
+                )
+                PARAM_COOLDOWN -> context.getString(
+                    R.string.lb_cp_cooldown,
+                    position
+                )
+                PARAM_GPRSDNS -> context.getString(
+                    R.string.lb_cp_gprsdns,
+                    position
+                )
+                PARAM_TIMEZONE -> context.getString(
+                    R.string.lb_cp_timezone,
+                    position
+                )
+                PARAM_ACC1 -> context.getString(
+                    R.string.lb_cp_acc1,
+                    position
+                )
+                PARAM_ACC2 -> context.getString(
+                    R.string.lb_cp_acc2,
+                    position
+                )
+                PARAM_ACC3 -> context.getString(
+                    R.string.lb_cp_acc3,
+                    position
+                )
+                PARAM_ACC4 -> context.getString(
+                    R.string.lb_cp_acc4,
+                    position
+                )
+                else -> String.format("#%d:", position)
+            }
+        }
 
-		// Renault Twizy:
-		static final int PARAM_PROFILE      = 0x0F; // current cfg profile nr (0..3)
-		static final int PARAM_PROFILE1     = 0x10; // custom profile #1 (binary, 2 slots)
-		static final int PARAM_PROFILE2     = 0x12; // custom profile #2 (binary, 2 slots)
-		static final int PARAM_PROFILE3     = 0x14; // custom profile #3 (binary, 2 slots)
-
-
-		public static final int PARAM_FEATURE_S = 0x18;
-		//		private static final int PARAM_FEATURE8  = 0x18;
-		//		private static final int PARAM_FEATURE9  = 0x19;
-		//		private static final int PARAM_FEATURE10 = 0x1A;
-		//		private static final int PARAM_FEATURE11 = 0x1B;
-		//		private static final int PARAM_FEATURE12 = 0x1C;
-		//		private static final int PARAM_FEATURE13 = 0x1D;
-		//		private static final int PARAM_FEATURE14 = 0x1E;
-		//		private static final int PARAM_FEATURE15 = 0x1F;
-
-		private LayoutInflater mInflater;
-		private final String[] mParams = new String[PARAM_FEATURE_S];
-
-		@Override
-		public int getCount() {
-			return PARAM_FEATURE_S;
-		}
-
-		@Override
-		public Object getItem(int position) {
-			return mParams[position];
-		}
-
-		@Override
-		public long getItemId(int position) {
-			return position;
-		}
-		
-		public void setParam(int key, String val) {
-			if (key > (PARAM_FEATURE_S-1)) return;
-			mParams[key] = val;
-			notifyDataSetChanged();
-		}
-		
-		public String getTitleRow(Context context, int position) {
-
-			// Renault Twizy:
-			if (mCarData.car_type.equals("RT")) {
-				switch (position) {
-					case PARAM_PROFILE:
-						return context.getString(R.string.lb_cp_rt_profile, position);
-					case PARAM_PROFILE1:
-					case PARAM_PROFILE1+1:
-						return context.getString(R.string.lb_cp_rt_profile1, position);
-					case PARAM_PROFILE2:
-					case PARAM_PROFILE2+1:
-						return context.getString(R.string.lb_cp_rt_profile2, position);
-					case PARAM_PROFILE3:
-					case PARAM_PROFILE3+1:
-						return context.getString(R.string.lb_cp_rt_profile3, position);
-
-					default:
-						// fall through to standard
-				}
-			}
-
-			// Standard:
-			switch (position) {
-				case PARAM_REGPHONE:
-					return context.getString(R.string.lb_cp_registered_telephone, position);
-				case PARAM_REGPASS:
-					return context.getString(R.string.lb_cp_module_password, position);
-				case PARAM_MILESKM:
-					return context.getString(R.string.lb_cp_miles_km, position);
-				case PARAM_NOTIFIES:
-					return context.getString(R.string.lb_cp_notifications, position);
-				case PARAM_SERVERIP:
-					return context.getString(R.string.lb_cp_ovms_server_ip, position);
-				case PARAM_GPRSAPN:
-					return context.getString(R.string.lb_cp_cellular_network_apn, position);
-				case PARAM_GPRSUSER:
-					return context.getString(R.string.lb_cp_cellular_network_user, position);
-				case PARAM_GPRSPASS:
-					return context.getString(R.string.lb_cp_cellular_network_password, position);
-				case PARAM_MYID:
-					return context.getString(R.string.lb_cp_vehicle_id, position);
-				case PARAM_NETPASS1:
-					return context.getString(R.string.lb_cp_server_password, position);
-				case PARAM_PARANOID:
-					return context.getString(R.string.lb_cp_paranoid_mode, position);
-				case PARAM_S_GROUP1:
-					return context.getString(R.string.lb_cp_social_group_1, position);
-				case PARAM_S_GROUP2:
-					return context.getString(R.string.lb_cp_social_group_2, position);
-				case PARAM_GSMLOCK:
-					return context.getString(R.string.lb_cp_gsmlock, position);
-				case PARAM_VEHICLETYPE:
-					return context.getString(R.string.lb_cp_vehicle_type, position);
-				case PARAM_COOLDOWN:
-					return context.getString(R.string.lb_cp_cooldown, position);
-				case PARAM_GPRSDNS:
-					return context.getString(R.string.lb_cp_gprsdns, position);
-				case PARAM_TIMEZONE:
-					return context.getString(R.string.lb_cp_timezone, position);
-
-				case PARAM_ACC1:
-					return context.getString(R.string.lb_cp_acc1, position);
-				case PARAM_ACC2:
-					return context.getString(R.string.lb_cp_acc2, position);
-				case PARAM_ACC3:
-					return context.getString(R.string.lb_cp_acc3, position);
-				case PARAM_ACC4:
-					return context.getString(R.string.lb_cp_acc4, position);
-
-				default:
-					return String.format("#%d:", position);
-			}
-		}
-
-		@Override
-		public View getView(int position, View convertView, ViewGroup parent) {
-			Context context = parent.getContext();
-			if (convertView == null) {
-				if (mInflater == null) {
-					mInflater = LayoutInflater.from(context);
-				}
-				convertView = mInflater.inflate(R.layout.item_keyvalue, null);
-			}
-
-			boolean isPasswd = (position == ControlParametersAdapter.PARAM_REGPASS) ||
-					(position == ControlParametersAdapter.PARAM_NETPASS1) ||
-					(position == ControlParametersAdapter.PARAM_GPRSPASS);
-
-			TextView tv = (TextView) convertView.findViewById(android.R.id.text1);
-			tv.setText(getTitleRow(context, position));
-			
-			tv = (TextView) convertView.findViewById(android.R.id.text2);
-			tv.setText(isPasswd ? "*****" : mParams[position]);
-			
-			return convertView;
-		}
-		
-	}
+        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+            var view = convertView
+            val context = parent.context
+            if (view == null) {
+                if (inflater == null) {
+                    inflater = LayoutInflater.from(context)
+                }
+                view = inflater!!.inflate(R.layout.item_keyvalue, null)
+            }
+            val isPasswd = position == PARAM_REGPASS
+                    || position == Companion.PARAM_NETPASS1
+                    || position == PARAM_GPRSPASS
+            var tv = view!!.findViewById<View>(android.R.id.text1) as TextView
+            tv.text = getTitleRow(context, position)
+            tv = view.findViewById<View>(android.R.id.text2) as TextView
+            tv.text = if (isPasswd) "*****" else params[position]
+            return view
+        }
+    }
 }

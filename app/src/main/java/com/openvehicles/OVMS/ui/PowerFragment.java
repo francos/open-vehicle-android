@@ -32,7 +32,7 @@ import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 import com.github.mikephil.charting.listener.ChartTouchListener;
 import com.github.mikephil.charting.listener.OnChartGestureListener;
 
-import com.openvehicles.OVMS.utils.AppPrefes;
+import com.openvehicles.OVMS.utils.AppPrefs;
 import com.openvehicles.OVMS.R;
 import com.openvehicles.OVMS.entities.CarData;
 import com.openvehicles.OVMS.entities.CmdSeries;
@@ -115,7 +115,7 @@ public class PowerFragment
 
 	private CarData mCarData;
 	private CmdSeries cmdSeries;
-	private AppPrefes appPrefes;
+	private AppPrefs appPrefs;
 
 
 	@Override
@@ -128,10 +128,10 @@ public class PowerFragment
 
 		// Load prefs:
 
-		appPrefes = new AppPrefes(getActivity(), "ovms");
+		appPrefs = new AppPrefs(getActivity(), "ovms");
 
-		mShowPower = appPrefes.getData("power_show_power").equals("on");
-		mShowEnergy = appPrefes.getData("power_show_energy").equals("on");
+		mShowPower = appPrefs.getData("power_show_power").equals("on");
+		mShowEnergy = appPrefs.getData("power_show_energy").equals("on");
 		if (!mShowPower && !mShowEnergy)
 			mShowPower = true;
 
@@ -538,8 +538,8 @@ public class PowerFragment
 	private void dataFilterChanged() {
 
 		// save prefs:
-		appPrefes.saveData("power_show_power", mShowPower ? "on" : "off");
-		appPrefes.saveData("power_show_energy", mShowEnergy ? "on" : "off");
+		appPrefs.saveData("power_show_power", mShowPower ? "on" : "off");
+		appPrefs.saveData("power_show_energy", mShowEnergy ? "on" : "off");
 
 		// check data status:
 		if (!isPackValid())
