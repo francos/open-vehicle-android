@@ -1,238 +1,219 @@
-package com.openvehicles.OVMS.ui;
+package com.openvehicles.OVMS.ui
 
-import android.app.Activity;
-import android.text.TextUtils;
-import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.Toast;
+import android.app.Activity
+import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.Fragment
+import com.openvehicles.OVMS.api.ApiObservable.addObserver
+import com.openvehicles.OVMS.api.ApiObservable.deleteObserver
+import com.openvehicles.OVMS.api.ApiObserver
+import com.openvehicles.OVMS.api.ApiService
+import com.openvehicles.OVMS.api.OnResultCommandListener
+import com.openvehicles.OVMS.entities.CarData
+import com.openvehicles.OVMS.ui.utils.Database
+import com.openvehicles.OVMS.ui.utils.ProgressOverlay
+import com.openvehicles.OVMS.utils.AppPrefs
+import com.openvehicles.OVMS.utils.CarsStorage.setSelectedCarId
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.fragment.app.Fragment;
+open class BaseFragment : Fragment(), ApiObserver {
 
-import com.openvehicles.OVMS.api.ApiObservable;
-import com.openvehicles.OVMS.api.ApiObserver;
-import com.openvehicles.OVMS.api.ApiService;
-import com.openvehicles.OVMS.api.OnResultCommandListener;
-import com.openvehicles.OVMS.entities.CarData;
-import com.openvehicles.OVMS.utils.AppPrefs;
-import com.openvehicles.OVMS.ui.utils.Database;
-import com.openvehicles.OVMS.ui.utils.ProgressOverlay;
-import com.openvehicles.OVMS.utils.CarsStorage;
+    private var sentCommandMessage: HashMap<String, String> = HashMap()
+    private var onResultCommandListener: OnResultCommandListener? = null
+    private var progressOverlay: ProgressOverlay? = null
+    private var progressShowOnStart = false
 
-import java.util.HashMap;
-
-public class BaseFragment extends Fragment implements ApiObserver {
-	private static final String TAG = "BaseFragment";
-
-	public HashMap<String, String> mSentCommandMessage;
-	public OnResultCommandListener mOnResultCommandListener;
-
-	public ProgressOverlay mProgressOverlay;
-	public boolean mProgressShowOnStart;
+    protected val compatActivity: AppCompatActivity?
+        get() = activity as AppCompatActivity?
 
 
-	public BaseFragment() {
-		mSentCommandMessage = new HashMap<String, String>();
-	}
+    // create progress overlay: (call this from onCreateView):
+    // ATT: if you enable showOnStart you need to take care about resumes etc.
+    fun createProgressOverlay(
+        inflater: LayoutInflater?,
+        container: ViewGroup?,
+        showOnStart: Boolean
+    ): ProgressOverlay {
+        progressOverlay = ProgressOverlay(inflater!!, container!!)
+        progressShowOnStart = showOnStart
+        return progressOverlay!!
+    }
 
+    // show/switch progress overlay in indeterminate mode (spinner icon):
+    fun showProgressOverlay() {
+        progressOverlay?.show()
+    }
 
-	// create progress overlay: (call this from onCreateView):
-	// ATT: if you enable showOnStart you need to take care about resumes etc.
-	public ProgressOverlay createProgressOverlay(LayoutInflater inflater, ViewGroup container, boolean showOnStart) {
-		mProgressOverlay = new ProgressOverlay(inflater, container);
-		mProgressShowOnStart = showOnStart;
-		return mProgressOverlay;
-	}
+    // show/switch progress overlay in indeterminate mode (spinner icon):
+    fun showProgressOverlay(message: String?) {
+        progressOverlay?.setLabel(message)
+        progressOverlay?.show()
+    }
 
-	// show/switch progress overlay in indeterminate mode (spinner icon):
-	public void showProgressOverlay() {
-		if (mProgressOverlay != null)
-			mProgressOverlay.show();
-	}
+    // show/switch progress overlay in determinate mode (bar),
+    //  with optional sub step progress (if stepCnt > 0)
+    //	hide overlay if maxPos reached:
+    // show/switch progress overlay in determinate mode (bar),
+    //	hide overlay if maxPos reached:
+    @JvmOverloads
+    fun stepProgressOverlay(pos: Int, maxPos: Int, step: Int = 0, stepCnt: Int = 0) {
+        progressOverlay?.step(pos, maxPos, step, stepCnt)
+    }
 
-	// show/switch progress overlay in indeterminate mode (spinner icon):
-	public void showProgressOverlay(String message) {
-		if (mProgressOverlay != null) {
-			mProgressOverlay.setLabel(message);
-			mProgressOverlay.show();
-		}
-	}
+    // show/switch progress overlay in determinate mode (bar),
+    //  with optional sub step progress (if stepCnt > 0)
+    //	hide overlay if maxPos reached:
+    fun stepProgressOverlay(message: String?, pos: Int, maxPos: Int, step: Int, stepCnt: Int) {
+        progressOverlay?.setLabel(message)
+        progressOverlay?.step(pos, maxPos, step, stepCnt)
+    }
 
-	// show/switch progress overlay in determinate mode (bar),
-	//	hide overlay if maxPos reached:
-	public void stepProgressOverlay(int pos, int maxPos) {
-		stepProgressOverlay(pos, maxPos, 0, 0);
-	}
+    // hide progress overlay:
+    fun hideProgressOverlay() {
+        progressOverlay?.hide()
+    }
 
-	// show/switch progress overlay in determinate mode (bar),
-	//  with optional sub step progress (if stepCnt > 0)
-	//	hide overlay if maxPos reached:
-	public void stepProgressOverlay(int pos, int maxPos, int step, int stepCnt) {
-		if (mProgressOverlay != null)
-			mProgressOverlay.step(pos, maxPos, step, stepCnt);
-	}
+    override fun onStart() {
+        Log.d(TAG, "onStart $javaClass")
+        super.onStart()
 
-	// show/switch progress overlay in determinate mode (bar),
-	//  with optional sub step progress (if stepCnt > 0)
-	//	hide overlay if maxPos reached:
-	public void stepProgressOverlay(String message, int pos, int maxPos, int step, int stepCnt) {
-		if (mProgressOverlay != null) {
-			mProgressOverlay.setLabel(message);
-			mProgressOverlay.step(pos, maxPos, step, stepCnt);
-		}
-	}
+        if (progressShowOnStart) {
+            progressOverlay?.show()
+        }
+        addObserver(this)
+        val service = getService()
+        if (service != null) {
+            onServiceAvailable(service)
+            if (service.isLoggedIn()) {
+                update(service.getCarData())
+            }
+        }
+    }
 
-	// hide progress overlay:
-	public void hideProgressOverlay() {
-		if (mProgressOverlay != null)
-			mProgressOverlay.hide();
-	}
+    override fun onStop() {
+        Log.d(TAG, "onStop $javaClass")
+        super.onStop()
 
+        cancelCommand()
+        deleteObserver(this)
+        if (progressOverlay != null) {
+            progressOverlay!!.hide()
+        }
+    }
 
-	@Override
-	public void onStart() {
-		Log.d(TAG, "onStart " + getClass());
-		super.onStart();
+    override fun update(carData: CarData?) {
+        // Override as needed
+    }
 
-		if (mProgressOverlay != null && mProgressShowOnStart)
-			mProgressOverlay.show();
+    override fun onServiceAvailable(service: ApiService) {
+        // Override as needed, default:
+        update(service.getCarData())
+    }
 
-		ApiObservable.INSTANCE.addObserver(this);
-		ApiService service = getService();
-		if (service != null) {
-			onServiceAvailable(service);
-			if (service.isLoggedIn())
-				update(service.getCarData());
-		}
-	}
+    override fun onServiceLoggedIn(service: ApiService?, isLoggedIn: Boolean) {
+        // Override as needed
+    }
 
-	@Override
-	public void onStop() {
-		Log.d(TAG, "onStop " + getClass());
-		super.onStop();
+    fun getSentCommandMessage(cmd: String): String {
+        return sentCommandMessage[cmd] ?: cmd
+    }
 
-		cancelCommand();
+    fun cancelCommand() {
+        val service = getService()
+            ?: return
 
-		ApiObservable.INSTANCE.deleteObserver(this);
+        if (onResultCommandListener != null) {
+            Log.d(TAG, "cancelCommand listener=$onResultCommandListener")
+            service.cancelCommand(onResultCommandListener)
+            onResultCommandListener = null
+        }
+        sentCommandMessage.clear()
+    }
 
-		if (mProgressOverlay != null)
-			mProgressOverlay.hide();
-	}
+    fun findViewById(resId: Int): View {
+        return requireView().findViewById(resId)
+    }
 
-	@Override
-	public void update(CarData carData) {
-		// Override as needed
-	}
+    fun sendCommand(
+        resIdMessage: Int,
+        command: String,
+        onResultCommandListener: OnResultCommandListener?
+    ) {
+        sendCommand(getString(resIdMessage), command, onResultCommandListener)
+    }
 
-	@Override
-	public void onServiceAvailable(ApiService service) {
-		// Override as needed, default:
-		update(service.getCarData());
-	}
+    fun sendCommand(
+        message: String,
+        command: String,
+        onResultCommandListener: OnResultCommandListener?
+    ) {
+        val service = getService()
+            ?: return
 
-	@Override
-	public void onServiceLoggedIn(ApiService service, boolean isLoggedIn) {
-		// Override as needed
-	}
+        // remember pMessage for result display:
+        try {
+            val cmd = command.split(",".toRegex(), limit = 2).toTypedArray()[0]
+            sentCommandMessage[cmd] = message
+        } catch (e: Exception) {
+            // ignore
+        }
 
-	public String getSentCommandMessage(String cmd) {
-		String msg = mSentCommandMessage.get(cmd);
-		return (msg == null) ? cmd : msg;
-	}
+        // Display message:
+        if (message.isNotEmpty()) {
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
 
-	public void cancelCommand() {
-		ApiService service = getService();
-		if (service == null)
-			return;
-		if (mOnResultCommandListener != null) {
-			Log.d(TAG, "cancelCommand listener=" + mOnResultCommandListener);
-			service.cancelCommand(mOnResultCommandListener);
-			mOnResultCommandListener = null;
-		}
-		mSentCommandMessage.clear();
-	}
+        // pass on to API service:
+        this.onResultCommandListener = onResultCommandListener
+        service.sendCommand(message, command, onResultCommandListener)
+    }
 
-	public View findViewById(int pResId) {
-		return getView().findViewById(pResId);
-	}
+    fun sendCommand(
+        command: String?,
+        onResultCommandListener: OnResultCommandListener?
+    ) {
+        val service = getService()
+            ?: return
+        this.onResultCommandListener = onResultCommandListener
+        service.sendCommand(command!!, onResultCommandListener)
+    }
 
-	public void sendCommand(int pResIdMessage, String pCommand,
-							OnResultCommandListener pOnResultCommandListener) {
-		sendCommand(getString(pResIdMessage), pCommand, pOnResultCommandListener);
-	}
+    fun changeCar(carData: CarData) {
+        val prefs = AppPrefs(requireActivity(), "ovms")
+        val database = Database(requireActivity())
+        Log.i(TAG, "changeCar: switching to vehicle ID " + carData.sel_vehicleid)
+        cancelCommand()
 
-	public void sendCommand(String pMessage, String pCommand,
-							OnResultCommandListener pOnResultCommandListener) {
+        // select car:
+        setSelectedCarId(carData.sel_vehicleid)
+        prefs.saveData("sel_vehicle_label", carData.sel_vehicle_label)
+        prefs.saveData("autotrack", "on")
+        prefs.saveData("Id", database.getConnectionFilter(carData.sel_vehicle_label))
 
-		ApiService service = getService();
-		if (service == null)
-			return;
+        // inform API service:
+        getService()?.changeCar(carData)
+    }
 
-		// remember pMessage for result display:
-		try {
-			String cmd = pCommand.split(",", 2)[0];
-			mSentCommandMessage.put(cmd, pMessage);
-		} catch (Exception e) {
-			// ignore
-		}
+    fun triggerCarDataUpdate() {
+        getService()?.triggerUpdate()
+    }
 
-		// Display message:
-		if (!TextUtils.isEmpty(pMessage)) {
-			Toast.makeText(getContext(), pMessage, Toast.LENGTH_SHORT).show();
-		}
+    protected fun getService(): ApiService? {
+        return if (activity is ApiActivity) {
+            (activity as ApiActivity).service
+        } else {
+            null
+        }
+    }
 
-		// pass on to API service:
-		mOnResultCommandListener = pOnResultCommandListener;
-		service.sendCommand(pMessage, pCommand, pOnResultCommandListener);
-	}
+    /*
+     * Inner types
+     */
 
-	public void sendCommand(String pCommand,
-							OnResultCommandListener pOnResultCommandListener) {
-		ApiService service = getService();
-		if (service == null)
-			return;
-		mOnResultCommandListener = pOnResultCommandListener;
-		service.sendCommand(pCommand, pOnResultCommandListener);
-	}
-
-	public void changeCar(CarData pCarData) {
-		AppPrefs prefs = new AppPrefs(getActivity(), "ovms");
-		Database database = new Database(getActivity());
-		Log.i(TAG, "changeCar: switching to vehicle ID " + pCarData.sel_vehicleid);
-
-		cancelCommand();
-
-		// select car:
-		CarsStorage.INSTANCE.setSelectedCarId(pCarData.sel_vehicleid);
-		prefs.saveData("sel_vehicle_label", pCarData.sel_vehicle_label);
-		prefs.saveData("autotrack", "on");
-		prefs.saveData("Id", database.getConnectionFilter(pCarData.sel_vehicle_label));
-
-		// inform API service:
-		ApiService service = getService();
-		if (service == null)
-			return;
-		service.changeCar(pCarData);
-	}
-
-	public ApiService getService() {
-		Activity activity = getActivity();
-		if (activity instanceof ApiActivity) {
-			return ((ApiActivity) activity).getService();
-		}
-		return null;
-	}
-
-	public void triggerCarDataUpdate() {
-		ApiService apiService = getService();
-		if (apiService != null)
-			apiService.triggerUpdate();
-	}
-
-	public AppCompatActivity getCompatActivity() {
-		return (AppCompatActivity) getActivity();
-	}
-
+    private companion object {
+        private const val TAG = "BaseFragment"
+    }
 }

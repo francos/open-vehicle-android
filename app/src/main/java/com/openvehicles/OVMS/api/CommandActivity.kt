@@ -139,7 +139,7 @@ class CommandActivity : ApiActivity(), CmdSeries.Listener {
         }
     }
 
-    override fun onServiceAvailable(service: ApiService?) {
+    override fun onServiceAvailable(service: ApiService) {
         Log.d(TAG, "onServiceAvailable $service")
         processCommand()
     }
@@ -291,7 +291,7 @@ class CommandActivity : ApiActivity(), CmdSeries.Listener {
             )
 
             // Start command:
-            cmdSeries = CmdSeries(this, mApiService, this)
+            cmdSeries = CmdSeries(this, service, this)
             cmdSeries!!.add(title, msgCommand!!)
             cmdSeries!!.start()
             val command = if (msgCommandCode == 7) {

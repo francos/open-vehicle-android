@@ -58,7 +58,7 @@ class FeaturesFragment : BaseFragment(), OnResultCommandListener, OnItemClickLis
         requireActivity().setTitle(R.string.Features)
     }
 
-    override fun onServiceAvailable(service: ApiService?) {
+    override fun onServiceAvailable(service: ApiService) {
         this.service = service
         requestData()
     }

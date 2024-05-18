@@ -40,9 +40,9 @@ class GlobalOptionsFragment : BaseFragment(), View.OnClickListener, OnFocusChang
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
 
-        compatActivity.supportActionBar!!.setIcon(R.drawable.ic_action_settings)
-        compatActivity.setTitle(R.string.Options)
-        appPrefs = AppPrefs(compatActivity, "ovms")
+        compatActivity?.supportActionBar!!.setIcon(R.drawable.ic_action_settings)
+        compatActivity?.setTitle(R.string.Options)
+        appPrefs = AppPrefs(compatActivity!!, "ovms")
         serviceEnabled = appPrefs!!.getData("option_service_enabled", "0") == "1"
         broadcastEnabled = appPrefs!!.getData("option_broadcast_enabled", "0") == "1"
         broadcastCodes = appPrefs!!.getData("option_broadcast_codes", DEFAULT_BROADCAST_CODES)

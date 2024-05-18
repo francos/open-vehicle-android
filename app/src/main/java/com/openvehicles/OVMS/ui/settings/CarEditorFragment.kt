@@ -55,7 +55,7 @@ class CarEditorFragment : BaseFragment() {
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
 
-        compatActivity.supportActionBar!!.setIcon(R.drawable.ic_action_edit)
+        compatActivity?.supportActionBar!!.setIcon(R.drawable.ic_action_edit)
         editPosition = requireArguments().getInt("position", -1)
         if (editPosition >= 0) {
             try {
@@ -205,7 +205,7 @@ class CarEditorFragment : BaseFragment() {
             setSelectedServer(0, false)
         } else {
             // edit existing car:
-            compatActivity.setTitle(carData!!.sel_vehicleid)
+            compatActivity?.setTitle(carData!!.sel_vehicleid)
             setValue(rootView!!, R.id.txt_vehicle_id, carData!!.sel_vehicleid)
             setValue(rootView, R.id.txt_vehicle_label, carData!!.sel_vehicle_label)
             setValue(rootView, R.id.txt_server_passwd, carData!!.sel_server_password)

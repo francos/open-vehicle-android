@@ -1,879 +1,842 @@
-package com.openvehicles.OVMS.ui;
-
-import android.Manifest;
-import android.app.NotificationManager;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
-import android.database.Cursor;
-import android.os.AsyncTask;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.text.Html;
-import android.text.method.LinkMovementMethod;
-import android.util.Log;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
-import android.widget.ProgressBar;
-import android.widget.TextView;
-
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.AlertDialog;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentPagerAdapter;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import androidx.viewpager.widget.ViewPager;
-
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GoogleApiAvailability;
-import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
-import com.google.firebase.FirebaseApp;
-import com.google.firebase.FirebaseOptions;
-import com.google.firebase.messaging.FirebaseMessaging;
-import com.openvehicles.OVMS.R;
-import com.openvehicles.OVMS.api.ApiService;
-import com.openvehicles.OVMS.entities.CarData;
-import com.openvehicles.OVMS.utils.AppPrefs;
-import com.openvehicles.OVMS.ui.FragMap.UpdateLocation;
-import com.openvehicles.OVMS.ui.GetMapDetails.GetMapDetailsListener;
-import com.openvehicles.OVMS.ui.utils.Database;
-import com.openvehicles.OVMS.utils.ConnectionList;
-import com.openvehicles.OVMS.utils.ConnectionList.ConnectionsListener;
-import com.openvehicles.OVMS.utils.Sys;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
-
-public class MainActivity extends ApiActivity implements
-		ActionBar.OnNavigationListener,
-		GetMapDetailsListener,
-		ConnectionsListener,
-		UpdateLocation {
-
-	private static final String TAG = "MainActivity";
-
-	public static final String ACTION_FCM_NEW_TOKEN = "fcmNewToken";
-	private static final String FCM_BROADCAST_TOPIC = "global";
-
-	public String versionName = "";
-	public int versionCode = 0;
-
-	AppPrefs appPrefs;
-	Database database;
-	public String uuid;
-
-	private ViewPager mViewPager;
-	private MainPagerAdapter mPagerAdapter;
-	public static UpdateLocation updateLocation;
-	public GetMapDetails getMapDetails;
-	public List<LatLng> getMapDetailList;
-	public long getMapDetailsBlockUntil = 0;
-	public long getMapDetailsBlockSeconds = 0;
-
-
-	/**
-	 * App lifecycle management:
-	 *
-	 */
-
-	@Override
-	protected void onCreate(Bundle savedInstanceState) {
-
-		super.onCreate(savedInstanceState);
-		Log.d(TAG, "onCreate");
-
-		appPrefs = new AppPrefs(this, "ovms");
-		database = new Database(this);
-
-		// get/create App UUID:
-		uuid = appPrefs.getData("UUID");
-		if (uuid.length() == 0) {
-			uuid = UUID.randomUUID().toString();
-			appPrefs.saveData("UUID", uuid);
-			Log.d(TAG, "onCreate: generated new UUID: " + uuid);
-		} else {
-			Log.d(TAG, "onCreate: using UUID: " + uuid);
-		}
-
-		// Check/create API key:
-		String apiKey = appPrefs.getData("APIKey");
-		if (apiKey.length() == 0) {
-			apiKey = Sys.getRandomString(25);
-			appPrefs.saveData("APIKey", apiKey);
-			Log.d(TAG, "onCreate: generated new APIKey: " + apiKey);
-		} else {
-			Log.d(TAG, "onCreate: using APIKey: " + apiKey);
-		}
-
-		// OCM init:
-		getMapDetails = null;
-		getMapDetailList = new ArrayList<LatLng>();
-		updateLocation = this;
-		updatelocation();
-		// update connection list if OCM is enabled:
-		if (appPrefs.getData("option_ocm_enabled", "1").equals("1")) {
-			new ConnectionList(this,this,true);
-		}
-
-		// Start background ApiService:
-		Log.i(TAG, "onCreate: starting ApiService");
-		try {
-			startService(new Intent(this, ApiService.class));
-		} catch (Exception e) {
-			Log.w(TAG, "onCreate: starting ApiService failed: " + e);
-		}
-
-		// set up receiver for server communication service:
-		registerReceiver(mApiEventReceiver, new IntentFilter(ApiService.ACTION_APIEVENT));
-
-		// set up receiver for notifications:
-		registerReceiver(mNotificationReceiver, new IntentFilter(ApiService.ACTION_NOTIFICATION));
-
-		// init UI tabs:
-		mViewPager = new ViewPager(this);
-		mViewPager.setId(android.R.id.tabhost);
-		setContentView(mViewPager);
-
-		// check for update, Google Play Services & permissions:
-		checkVersion();
-
-		// configure ActionBar:
-		final ActionBar actionBar = getSupportActionBar();
-		actionBar.setDisplayShowTitleEnabled(false);
-		actionBar.setDisplayShowHomeEnabled(true);
-
-		// Progress bar init:
-		ProgressBar progressBar = new ProgressBar(this);
-		progressBar.setVisibility(View.GONE);
-		progressBar.setIndeterminate(true);
-		actionBar.setDisplayShowCustomEnabled(true);
-		actionBar.setCustomView(progressBar);
-
-		mPagerAdapter = new MainPagerAdapter(
-				new TabInfo(R.string.Messages, R.drawable.ic_action_email, NotificationsFragment.class),
-				new TabInfo(R.string.Battery, R.drawable.ic_action_battery, InfoFragment.class),
-				new TabInfo(R.string.Car, R.drawable.ic_action_car, CarFragment.class),
-				new TabInfo(R.string.Location, R.drawable.ic_action_location_map, FragMap.class),
-				new TabInfo(R.string.Settings, R.drawable.ic_action_settings, SettingsFragment.class)
-		);
-
-		mViewPager.setAdapter(mPagerAdapter);
-		mViewPager.setOffscreenPageLimit(mPagerAdapter.getCount()-1);
-		mViewPager.addOnPageChangeListener(
-				new ViewPager.SimpleOnPageChangeListener() {
-					@Override
-					public void onPageSelected(int position) {
-						actionBar.setSelectedNavigationItem(position);
-
-						// cancel system notifications on page "Messages":
-						if (mPagerAdapter.getItemId(position) == R.string.Messages) {
-							NotificationManager mNotificationManager = (NotificationManager)
-									getSystemService(Context.NOTIFICATION_SERVICE);
-							mNotificationManager.cancelAll();
-						}
-					}
-				});
-
-		actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_LIST);
-		actionBar.setListNavigationCallbacks(
-				new NavAdapter(this, mPagerAdapter.getTabInfoItems()), this);
-
-		// start on battery tab:
-		onNavigationItemSelected(mPagerAdapter.getPosition(R.string.Battery), 0);
-
-		// process Activity startup intent:
-		onNewIntent(getIntent());
-	}
-
-	@Override
-	public void onNewIntent(Intent newIntent) {
-		if (newIntent == null)
-			return;
-		Log.d(TAG, "onNewIntent: " + newIntent.toString());
-
-		super.onNewIntent(newIntent);
-
-		// if launched from notification, switch to messages tab:
-		if (newIntent.getBooleanExtra("onNotification", false)) {
-			onNavigationItemSelected(mPagerAdapter.getPosition(R.string.Messages), 0);
-		}
-	}
-
-	@Override
-	protected void onDestroy() {
-		Log.d(TAG, "onDestroy");
-		unregisterReceiver(mApiEventReceiver);
-		unregisterReceiver(mNotificationReceiver);
-		database.close();
-
-		// Stop background ApiService?
-		boolean serviceEnabled = appPrefs.getData("option_service_enabled", "0").equals("1");
-		if (!serviceEnabled) {
-			Log.i(TAG, "onDestroy: stopping ApiService");
-			stopService(new Intent(this, ApiService.class));
-		}
-
-		super.onDestroy();
-	}
-
-	@Override
-	protected void onResume() {
-		super.onResume();
-		Log.d(TAG, "onResume");
-		LocalBroadcastManager.getInstance(this).registerReceiver(mGcmRegistrationBroadcastReceiver,
-				new IntentFilter(ACTION_FCM_NEW_TOKEN));
-		onNewIntent(getIntent());
-	}
-
-	@Override
-	protected void onPause() {
-		Log.d(TAG, "onPause");
-		LocalBroadcastManager.getInstance(this).unregisterReceiver(mGcmRegistrationBroadcastReceiver);
-		super.onPause();
-	}
-
-
-	@Override
-	public void setSupportProgressBarIndeterminateVisibility(boolean visible) {
-		getSupportActionBar().getCustomView().setVisibility(visible ? View.VISIBLE : View.GONE);
-	}
-
-
-	/**
-	 * Check for update, show changes info
-	 */
-	private void checkVersion() {
-		try {
-			// get App version
-			PackageInfo pinfo = getPackageManager().getPackageInfo(getPackageName(), 0);
-			versionName = pinfo.versionName;
-			versionCode = pinfo.versionCode;
-
-			if (!appPrefs.getData("lastUsedVersionName", "").equals(versionName)) {
-				showVersion();
-			} else {
-				checkPlayServices();
-			}
-
-		} catch (PackageManager.NameNotFoundException e) {
-			// ignore
-			checkPlayServices();
-		}
-	}
-
-	public void showVersion() {
-		TextView msg = new TextView(this);
-		final float scale = getResources().getDisplayMetrics().density;
-		final int pad = (int) (25 * scale + 0.5f);
-		msg.setPadding(pad, pad, pad, pad);
-		msg.setText(Html.fromHtml(getString(R.string.about_message)));
-		msg.setMovementMethod(LinkMovementMethod.getInstance());
-		msg.setClickable(true);
-
-		AlertDialog dialog = new AlertDialog.Builder(MainActivity.this)
-				.setTitle(getString(R.string.about_title, versionName, versionCode))
-				.setView(msg)
-				.setPositiveButton(R.string.msg_ok, (dialog1, which) ->
-						appPrefs.saveData("lastUsedVersionName", versionName))
-				.setOnDismissListener(dialog12 -> checkPlayServices())
-				.show();
-	}
-
-
-	/**
-	 * Check the device for Google Play Services, tell user if missing.
-	 */
-	private void checkPlayServices() {
-
-		if (appPrefs.getData("skipPlayServicesCheck", "0").equals("1"))
-			return;
-
-		GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
-		int resultCode = apiAvailability.isGooglePlayServicesAvailable(this);
-		if (resultCode != ConnectionResult.SUCCESS) {
-
-			AlertDialog dialog = new AlertDialog.Builder(MainActivity.this)
-					.setTitle(R.string.common_google_play_services_install_title)
-					.setMessage(R.string.play_services_recommended)
-					.setPositiveButton(R.string.remind, null)
-					.setNegativeButton(R.string.dontremind, (dialog1, which) ->
-							appPrefs.saveData("skipPlayServicesCheck", "1"))
-					.setOnDismissListener(dialog12 -> checkPermissions())
-					.show();
-		} else {
-			checkPermissions();
-		}
-	}
-
-	/**
-	 * Check / request permissions
-	 */
-	private void checkPermissions() {
-		ArrayList<String> permissions = new ArrayList<>(2);
-		boolean show_rationale = false;
-
-		// ACCESS_FINE_LOCATION: needed for the "My location" map button
-		if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-				!= PackageManager.PERMISSION_GRANTED) {
-			permissions.add(Manifest.permission.ACCESS_FINE_LOCATION);
-			show_rationale = ActivityCompat.shouldShowRequestPermissionRationale(
-					this, Manifest.permission.ACCESS_FINE_LOCATION);
-		}
-
-		// POST_NOTIFICATIONS: needed on Android >= 13 to create notifications
-		if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
-				ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-						!= PackageManager.PERMISSION_GRANTED) {
-			permissions.add(Manifest.permission.POST_NOTIFICATIONS);
-			show_rationale |= ActivityCompat.shouldShowRequestPermissionRationale(
-					this, Manifest.permission.POST_NOTIFICATIONS);
-		}
-
-		if (!permissions.isEmpty()) {
-			String[] permArray = new String[permissions.size()];
-			permissions.toArray(permArray);
-			if (show_rationale) {
-				AlertDialog dialog = new AlertDialog.Builder(MainActivity.this)
-						.setTitle(R.string.needed_permissions_title)
-						.setMessage(R.string.needed_permissions_message)
-						.setNegativeButton(R.string.later, null)
-						.setPositiveButton(R.string.msg_ok, (dialog1, which) -> {
-							ActivityCompat.requestPermissions(MainActivity.this, permArray, 0);
-						})
-						.show();
-			} else {
-				ActivityCompat.requestPermissions(MainActivity.this, permArray, 0);
-			}
-		}
-	}
-
-	/**
-	 * FCM push notification registration:
-	 * 	- server login => gcmStartRegistration
-	 * 	- init gcmSenderId specific FirebaseApp instance as needed
-	 * 	- subscribe App instance to FCM broadcast channel (async)
-	 * 	- get the App instance FCM token (async)
-	 * 	- start GcmDoSubscribe for server push subscription (async, retries if necessary)
-	 */
-
-	// onNewToken() callback also fires from getToken(), so we need a recursion inhibitor:
-	private boolean mTokenRequested = false;
-
-	private void gcmStartRegistration() {
-		CarData carData = getLoggedInCar();
-		if (carData == null)
-			return;
-		String vehicleId = carData.sel_vehicleid;
-
-		// Initialize App for server/car specific GCM sender ID:
-		FirebaseApp myApp = FirebaseApp.getInstance();
-		FirebaseOptions defaults = myApp.getOptions();
-
-		String gcmSenderId;
-		if (carData.sel_gcm_senderid != null && carData.sel_gcm_senderid.length() > 0) {
-			gcmSenderId = carData.sel_gcm_senderid;
-		} else {
-			gcmSenderId = defaults.getGcmSenderId();
-		}
-		Log.d(TAG, "gcmStartRegistration: vehicleId=" + vehicleId
-				+ ", gcmSenderId=" + gcmSenderId);
-
-		if (gcmSenderId != null && !gcmSenderId.equals(defaults.getGcmSenderId())) {
-			try {
-				myApp = FirebaseApp.getInstance(gcmSenderId);
-				Log.i(TAG, "gcmStartRegistration: reusing FirebaseApp " + myApp.getName());
-			}
-			catch (Exception ex1) {
-				try {
-					// Note: we assume here we can simply replace the sender ID. This has been tested
-					//  successfully, but may need to be reconsidered & changed in the future.
-					// It works because FirebaseMessaging relies on Metadata.getDefaultSenderId(),
-					//  which prioritizes gcmSenderId if set. If gcmSenderId isn't set, it falls back
-					//  to extracting the project number from the applicationId.
-					// FCM token creation needs Project ID, Application ID and API key, but these
-					//  currently don't need to match additional sender ID projects, so we can
-					//  use the defaults. If/when this changes in the future, users will need to
-					//  supply these three instead of the sender ID (or build the App using their
-					//  "google-services.json" file).
-					FirebaseOptions myOptions = new FirebaseOptions.Builder(defaults)
-							//.setProjectId("…")
-							//.setApplicationId("…")
-							//.setApiKey("…")
-							.setGcmSenderId(gcmSenderId)
-							.build();
-					myApp = FirebaseApp.initializeApp(this, myOptions, gcmSenderId);
-					Log.i(TAG, "gcmStartRegistration: initialized new FirebaseApp " + myApp.getName());
-				}
-				catch (Exception ex2) {
-					Log.e(TAG, "gcmStartRegistration: failed to initialize FirebaseApp, skipping token registration", ex2);
-					return;
-				}
-			}
-		}
-
-		// Get messaging interface:
-		FirebaseMessaging myMessaging = myApp.get(FirebaseMessaging.class);
-
-		// Subscribe to broadcast channel:
-		myMessaging.subscribeToTopic(FCM_BROADCAST_TOPIC)
-				.addOnCompleteListener(new OnCompleteListener<Void>() {
-					@Override
-					public void onComplete(@NonNull Task<Void> task) {
-						if (!task.isSuccessful()) {
-							Log.e(TAG, "gcmStartRegistration: broadcast topic subscription failed");
-						} else {
-							Log.i(TAG, "gcmStartRegistration: broadcast topic subscription done");
-						}
-					}
-				});
-
-		// Start OVMS server push subscription:
-		mTokenRequested = true; // inhibit onNewToken() callback
-		myMessaging.getToken()
-				.addOnCompleteListener(new OnCompleteListener<String>() {
-					@Override
-					public void onComplete(@NonNull Task<String> task) {
-						mTokenRequested = false; // allow onNewToken() callback
-						if (!task.isSuccessful()) {
-							Log.w(TAG, "gcmStartRegistration: fetching FCM registration token failed", task.getException());
-							return;
-						}
-						// as this is an async callback, verify we're still logged in as the initial vehicle:
-						if (!isLoggedIn(vehicleId)) {
-							Log.d(TAG, "gcmStartRegistration: discard callback, logged in vehicle has changed");
-							return;
-						}
-						// Get FCM registration token
-						String token = task.getResult();
-						Log.i(TAG, "gcmStartRegistration: vehicleId=" + vehicleId
-								+ ", gcmSenderId=" + gcmSenderId
-								+ " => token=" + token);
-						// Start push subscription at OVMS server
-						mGcmHandler.post(new GcmDoSubscribe(vehicleId, token));
-					}
-				});
-	}
-
-	private BroadcastReceiver mGcmRegistrationBroadcastReceiver = new BroadcastReceiver() {
-		private static final String TAG = "mGcmRegReceiver";
-		@Override
-		public void onReceive(Context context, Intent intent) {
-			Log.d(TAG, "onReceive intent: " + intent.toString());
-			if (!mTokenRequested) {
-				Log.i(TAG, "FCM token renewal detected => redo server registration");
-				gcmStartRegistration();
-			}
-		}
-	};
-
-	private final Handler mGcmHandler = new Handler(Looper.getMainLooper());
-
-	private class GcmDoSubscribe implements Runnable {
-		private static final String TAG = "GcmDoSubscribe";
-		private String mVehicleId, mToken;
-
-		public GcmDoSubscribe(String pVehicleId, String pToken) {
-			mVehicleId = pVehicleId;
-			mToken = pToken;
-		}
-
-		@Override
-		public void run() {
-			ApiService service = getService();
-			if (service == null) {
-				Log.d(TAG, "ApiService terminated, cancelling");
-				return;
-			}
-			else if (!service.isLoggedIn()) {
-				Log.d(TAG, "ApiService not yet logged in, scheduling retry");
-				mGcmHandler.postDelayed(this, 5000);
-				return;
-			}
-
-			CarData carData = service.getCarData();
-			if (carData == null || carData.sel_vehicleid == null || carData.sel_vehicleid.isEmpty()) {
-				Log.d(TAG, "ApiService not logged in / has no defined car, cancelling");
-				return;
-			}
-
-			// Async operation, verify we're still logged in to the same vehicle:
-			if (!carData.sel_vehicleid.equals(mVehicleId)) {
-				Log.d(TAG, "ApiService logged in to different car, cancelling");
-				return;
-			}
-
-			// Subscribe at OVMS server:
-			Log.d(TAG, "subscribing vehicle ID " + mVehicleId + " to FCM token " + mToken);
-			// MP-0 p<appid>,<pushtype>,<pushkeytype>{,<vehicleid>,<netpass>,<pushkeyvalue>}
-			String cmd = String.format("MP-0 p%s,gcm,production,%s,%s,%s",
-					uuid, carData.sel_vehicleid, carData.sel_server_password, mToken);
-			if (!service.sendCommand(cmd, null)) {
-				Log.w(TAG, "FCM server push subscription failed, scheduling retry");
-				mGcmHandler.postDelayed(this, 5000);
-			} else {
-				Log.i(TAG, "FCM server push subscription done");
-			}
-		}
-	}
-
-
-	/**
-	 * ApiService / OVMS server communication:
-	 *
-	 */
-
-	private AlertDialog mApiErrorDialog;
-	private String mApiErrorMessage;
-
-	private final BroadcastReceiver mApiEventReceiver = new BroadcastReceiver() {
-		@Override
-		public void onReceive(Context context, Intent intent) {
-			String event = intent.getStringExtra("event");
-			Log.v(TAG, "mApiEventReceiver: event=" + event);
-
-			if ("LoginBegin".equals(event)) {
-				Log.d(TAG, "mApiEventReceiver: login process started");
-
-				// show progress indicator:
-				setSupportProgressBarIndeterminateVisibility(true);
-			}
-
-			else if ("LoginComplete".equals(event)) {
-				Log.d(TAG, "mApiEventReceiver: login successful");
-
-				// hide progress indicator:
-				setSupportProgressBarIndeterminateVisibility(false);
-
-				// ...and hide error dialog:
-				if (mApiErrorDialog != null && mApiErrorDialog.isShowing()) {
-					mApiErrorDialog.hide();
-				}
-
-				// schedule GCM registration:
-				gcmStartRegistration();
-			}
-
-			else if ("ServerSocketError".equals(event)) {
-				Log.d(TAG, "mApiEventReceiver: server/login error");
-
-				// hide progress indicator:
-				setSupportProgressBarIndeterminateVisibility(false);
-
-				// check if this message needs to be displayed:
-				String message = intent.getStringExtra("message");
-				if (message == null) return;
-				if (message.equals(mApiErrorMessage) && mApiErrorDialog != null && mApiErrorDialog.isShowing()) {
-					return;
-				}
-
-				// display message:
-				if (mApiErrorDialog != null) {
-					mApiErrorDialog.dismiss();
-				}
-				mApiErrorMessage = message;
-				mApiErrorDialog = new AlertDialog.Builder(MainActivity.this)
-						.setTitle(R.string.Error)
-						.setMessage(mApiErrorMessage)
-						.setPositiveButton(android.R.string.ok, null)
-						.show();
-			}
-		}
-	};
-
-
-	/**
-	 * User interface handling:
-	 *
-	 */
-
-	private class TabInfo {
-		public final int title_res_id, icon_res_id;
-		public final Class<? extends BaseFragment> fragment_class;
-		public Fragment fragment;
-
-		public String getFragmentName() {
-			return fragment_class.getName();
-		}
-
-		public TabInfo(int pTitleResId, int pIconResId,
-				Class<? extends BaseFragment> pFragmentClass) {
-			title_res_id = pTitleResId;
-			icon_res_id = pIconResId;
-			fragment_class = pFragmentClass;
-			fragment = null;
-		}
-
-		@Override
-		public String toString() {
-			return getString(title_res_id);
-		}
-	}
-
-	@Override
-	public boolean onNavigationItemSelected(int itemPosition, long itemId) {
-		if (itemPosition < 0 || itemPosition >= mPagerAdapter.getCount())
-			return false;
-		TabInfo ti = mPagerAdapter.getTabInfoItems()[itemPosition];
-		getSupportActionBar().setIcon(ti.icon_res_id);
-		mViewPager.setCurrentItem(itemPosition, false);
-		return true;
-	}
-
-	private static class NavAdapter extends ArrayAdapter<TabInfo> {
-		public NavAdapter(Context context, TabInfo[] objects) {
-			super(context, android.R.layout.simple_spinner_item, objects);
-			setDropDownViewResource(R.layout.support_simple_spinner_dropdown_item);
-		}
-
-		@Override
-		public View getDropDownView(int position, View convertView,
-				ViewGroup parent) {
-			TextView tv = (TextView) super.getDropDownView(position,
-					convertView, parent);
-			tv.setCompoundDrawablesWithIntrinsicBounds(
-					getItem(position).icon_res_id, 0, 0, 0);
-			return tv;
-		}
-	}
-
-	private class MainPagerAdapter extends FragmentPagerAdapter {
-		private final TabInfo[] mTabInfoItems;
-
-		public MainPagerAdapter(TabInfo... pTabInfoItems) {
-			super(getSupportFragmentManager());
-			mTabInfoItems = pTabInfoItems;
-		}
-
-		public TabInfo[] getTabInfoItems() {
-			return mTabInfoItems;
-		}
-
-		@Override
-		public Fragment getItem(int pPosition) {
-			if (pPosition < 0 || pPosition >= mTabInfoItems.length)
-				return null;
-			if (mTabInfoItems[pPosition].fragment == null) {
-				// instantiate fragment:
-				mTabInfoItems[pPosition].fragment = Fragment.instantiate(
-						MainActivity.this,
-						mTabInfoItems[pPosition].getFragmentName());
-			}
-			Log.d(TAG, "MainPagerAdapter: pos=" + pPosition + " => frg=" + mTabInfoItems[pPosition].fragment);
-			return mTabInfoItems[pPosition].fragment;
-		}
-
-		public Fragment getItemByTitle(int pTitle) {
-			return getItem(getPosition(pTitle));
-		}
-
-		@Override
-		public int getCount() {
-			return mTabInfoItems.length;
-		}
-
-		@Override
-		public long getItemId(int position) {
-			// use Title String resource id as Item id:
-			return mTabInfoItems[position].title_res_id;
-		}
-
-		public int getPosition(int itemId) {
-			for (int p = 0; p < mTabInfoItems.length; p++) {
-				if (mTabInfoItems[p].title_res_id == itemId)
-					return p;
-			}
-			return -1;
-		}
-
-		@Override
-		public CharSequence getPageTitle(int pPosition) {
-			return getString(mTabInfoItems[pPosition].title_res_id);
-		}
-	}
-
-
-	@Override
-	public void onConnectionChanged(String al, String name) {
-		// TODO Auto-generated method stub
-
-	}
-
-
-	// Make notification updates visible immediately:
-	private final BroadcastReceiver mNotificationReceiver = new BroadcastReceiver() {
-
-		@Override
-		public void onReceive(Context context, Intent intent) {
-			Log.d(TAG, "mNotificationReceiver: received " + intent.toString());
-
-			// update messages list:
-			NotificationsFragment frg = (NotificationsFragment) mPagerAdapter.getItemByTitle(R.string.Messages);
-			if (frg != null) {
-				Log.d(TAG, "mNotificationReceiver: update notifications fragment");
-				frg.update();
-				if (intent.getBooleanExtra("onNotification", false)) {
-					Log.d(TAG, "mNotificationReceiver: switch to notifications fragment");
-					BaseFragmentActivity.finishCurrent();
-					onNavigationItemSelected(mPagerAdapter.getPosition(R.string.Messages), 0);
-				}
-			}
-		}
-	};
-
-
-
-	@Override
-	public void updatelocation() {
-
-		// get car location:
-		String lat = "37.410866";
-		String lng = "-122.001946";
-
-		if (appPrefs.getData("lat_main").equals("")) {
-			// init car position:
-			appPrefs.saveData("lat_main", lat);
-			appPrefs.saveData("lng_main", lng);
-			Log.i(TAG, "updatelocation: init car position");
-		} else {
-			// get current car position:
-			lat = appPrefs.getData("lat_main");
-			lng = appPrefs.getData("lng_main");
-		}
-
-		// Start OpenChargeMap task:
-		try {
-			double dlat = Double.parseDouble(lat), dlng = Double.parseDouble(lng);
-			StartGetMapDetails(new LatLng(dlat, dlng));
-		} catch (Exception e) {
-			// ignore
-		}
-	}
-
-	public boolean isMapCacheValid(LatLng center) {
-		// As OCM does not yet support incremental queries,
-		// we're using a cache with key = int(lat/lng)
-		// resulting in a tile size of max. 112 x 112 km
-		// = diagonal max 159 km
-		// The API call will fetch a fixed radius of 160 km
-		// covering all adjacent tiles.
-
-		// check OCM cache for key int(lat/lng):
-
-		int latitude = (int) center.latitude;
-		int longitude = (int) center.longitude;
-
-		Cursor cursor = database.getLatLngDetail(latitude, longitude);
-		int colLastUpdate = cursor.getColumnIndex("last_update");
-		if (cursor.getCount() == 0) {
-			cursor.close();
-			return false;
-		}
-		else if (cursor.moveToFirst()) {
-			// check if last tile update was more than 24 hours ago:
-			long last_update = (colLastUpdate >= 0) ? cursor.getLong(colLastUpdate) : 0;
-			long now = System.currentTimeMillis() / 1000;
-			if (now > last_update + (3600 * 24)) {
-				cursor.close();
-				return false;
-			}
-		}
-
-		Log.v(TAG, "isMapCacheValid: cache valid for lat/lng=" + latitude + "/" + longitude);
-		cursor.close();
-		return true;
-	}
-
-	public void StartGetMapDetails(LatLng center) {
-		if (!isMapCacheValid(center)) {
-			getMapDetailList.add(center);
-			StartGetMapDetails();
-		} else {
-			Log.v(TAG, "StartGetMapDetails: map cache valid for center=" + center);
-		}
-	}
-
-	public void StartGetMapDetails() {
-		// check if task is still running:
-		if (getMapDetails != null && getMapDetails.getStatus() != AsyncTask.Status.FINISHED) {
-			return;
-		}
-		// check if error block period is active:
-		if (System.currentTimeMillis() < getMapDetailsBlockUntil) {
-			return;
-		}
-		// check if OCM has been disabled:
-		if (appPrefs.getData("option_ocm_enabled", "1").equals("0")) {
-			return;
-		}
-
-		do {
-			// get next coordinates to fetch:
-			if (getMapDetailList.isEmpty()) {
-				Log.i(TAG, "StartGetMapDetails: done.");
-				return;
-			}
-
-			LatLng center = getMapDetailList.remove(0);
-			if (isMapCacheValid(center)) {
-				continue;
-			}
-
-			// create new fetcher task:
-			Log.i(TAG, "StartGetMapDetails: starting task for " + center);
-			getMapDetails = new GetMapDetails(MainActivity.this, center, this);
-			getMapDetails.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-			return;
-
-		} while(true);
-	}
-
-	private final Handler mGetMapDetailsHandler = new Handler(Looper.getMainLooper());
-
-	@Override
-	public void getMapDetailsDone(boolean success, LatLng center) {
-		if (success) {
-			// mark cache tile valid:
-			Log.i(TAG, "getMapDetailsDone: OCM updates received for " + center);
-			database.addLatLngDetail((int)center.latitude, (int)center.longitude);
-			// update map:
-			FragMap frg = (FragMap) mPagerAdapter.getItemByTitle(R.string.Location);
-			if (frg != null) {
-				Log.d(TAG, "getMapDetailsDone: OCM updates received => calling FragMap.update()");
-				frg.update();
-			}
-			// clear blocking:
-			getMapDetailsBlockUntil = 0;
-			getMapDetailsBlockSeconds = 0;
-			// check for next fetch job:
-			StartGetMapDetails();
-		} else {
-			Log.e(TAG, "getMapDetailsDone: OCM updates failed for " + center);
-			// increase blocking time up to 120 seconds:
-			if (getMapDetailsBlockSeconds < 120) {
-				getMapDetailsBlockSeconds += 10;
-			}
-			Log.d(TAG, "getMapDetailsDone: blocking OCM API calls for " + getMapDetailsBlockSeconds + " seconds");
-			getMapDetailsBlockUntil = System.currentTimeMillis() + (1000 * getMapDetailsBlockSeconds);
-			// schedule retry:
-			if (getMapDetailsBlockSeconds < 120) {
-				mGetMapDetailsHandler.postDelayed(() -> StartGetMapDetails(center), 1000 * getMapDetailsBlockSeconds);
-			} else {
-				Log.w(TAG, "getMapDetailsDone: maximum block time reached, no further retries");
-				// Note: retry blocking will be resolved by the next regular fetch from a vehicle movement
-			}
-		}
-	}
-
+package com.openvehicles.OVMS.ui
+
+import android.Manifest
+import android.app.NotificationManager
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.DialogInterface
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.PackageManager
+import android.os.AsyncTask
+import android.os.Build
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.text.Html
+import android.text.method.LinkMovementMethod
+import android.util.Log
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import android.widget.ProgressBar
+import android.widget.TextView
+import androidx.appcompat.app.ActionBar
+import androidx.appcompat.app.AlertDialog
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentPagerAdapter
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import androidx.viewpager.widget.ViewPager
+import androidx.viewpager.widget.ViewPager.SimpleOnPageChangeListener
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.tasks.OnCompleteListener
+import com.google.firebase.FirebaseApp
+import com.google.firebase.FirebaseOptions
+import com.google.firebase.messaging.FirebaseMessaging
+import com.openvehicles.OVMS.R
+import com.openvehicles.OVMS.api.ApiService
+import com.openvehicles.OVMS.ui.BaseFragmentActivity.Companion.finishCurrent
+import com.openvehicles.OVMS.ui.MapFragment.UpdateLocation
+import com.openvehicles.OVMS.ui.utils.Database
+import com.openvehicles.OVMS.utils.AppPrefs
+import com.openvehicles.OVMS.utils.ConnectionList
+import com.openvehicles.OVMS.utils.ConnectionList.ConnectionsListener
+import com.openvehicles.OVMS.utils.Sys.getRandomString
+import java.util.UUID
+
+class MainActivity : ApiActivity(), ActionBar.OnNavigationListener, GetMapDetailsListener,
+    ConnectionsListener, UpdateLocation {
+
+    private var versionName = ""
+    private var versionCode = 0
+    private lateinit var appPrefs: AppPrefs
+    private lateinit var database: Database
+    private lateinit var uuid: String
+    private lateinit var viewPager: ViewPager
+    private lateinit var pagerAdapter: MainPagerAdapter
+    private var getMapDetails: GetMapDetails? = null
+    private var getMapDetailList: MutableList<LatLng?> = mutableListOf()
+    private var getMapDetailsBlockUntil: Long = 0
+    private var getMapDetailsBlockSeconds: Long = 0
+    private var tokenRequested = false
+
+    private val getMapDetailsHandler = Handler(Looper.getMainLooper())
+
+    private val gcmHandler = Handler(Looper.getMainLooper())
+    private val gcmRegistrationBroadcastReceiver: BroadcastReceiver =
+        object : BroadcastReceiver() {
+            private val TAG = "mGcmRegReceiver"
+            override fun onReceive(context: Context, intent: Intent) {
+                Log.d(TAG, "onReceive intent: $intent")
+                if (!tokenRequested) {
+                    Log.i(TAG, "FCM token renewal detected => redo server registration")
+                    gcmStartRegistration()
+                }
+            }
+        }
+
+    /**
+     * ApiService / OVMS server communication:
+     *
+     */
+    private var apiErrorDialog: AlertDialog? = null
+    private var apiErrorMessage: String? = null
+    private val apiEventReceiver: BroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val event = intent.getStringExtra("event")
+            Log.v(TAG, "mApiEventReceiver: event=$event")
+            when (event) {
+                "LoginBegin" -> {
+                    Log.d(TAG, "mApiEventReceiver: login process started")
+
+                    // show progress indicator:
+                    setSupportProgressBarIndeterminateVisibility(true)
+                }
+                "LoginComplete" -> {
+                    Log.d(TAG, "mApiEventReceiver: login successful")
+
+                    // hide progress indicator:
+                    setSupportProgressBarIndeterminateVisibility(false)
+
+                    // ...and hide error dialog:
+                    if (apiErrorDialog != null && apiErrorDialog!!.isShowing) {
+                        apiErrorDialog!!.hide()
+                    }
+
+                    // schedule GCM registration:
+                    gcmStartRegistration()
+                }
+                "ServerSocketError" -> {
+                    Log.d(TAG, "mApiEventReceiver: server/login error")
+
+                    // hide progress indicator:
+                    setSupportProgressBarIndeterminateVisibility(false)
+
+                    // check if this message needs to be displayed:
+                    val message = intent.getStringExtra("message") ?: return
+                    if (message == apiErrorMessage && apiErrorDialog != null && apiErrorDialog!!.isShowing) {
+                        return
+                    }
+
+                    // display message:
+                    if (apiErrorDialog != null) {
+                        apiErrorDialog!!.dismiss()
+                    }
+                    apiErrorMessage = message
+                    apiErrorDialog = AlertDialog.Builder(this@MainActivity)
+                        .setTitle(R.string.Error)
+                        .setMessage(apiErrorMessage)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show()
+                }
+            }
+        }
+    }
+
+    // Make notification updates visible immediately:
+    private val notificationReceiver: BroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            Log.d(TAG, "mNotificationReceiver: received $intent")
+
+            // update messages list:
+            val frg = pagerAdapter.getItemByTitle(R.string.Messages) as NotificationsFragment?
+            if (frg != null) {
+                Log.d(TAG, "mNotificationReceiver: update notifications fragment")
+                frg.update()
+                if (intent.getBooleanExtra("onNotification", false)) {
+                    Log.d(TAG, "mNotificationReceiver: switch to notifications fragment")
+                    finishCurrent()
+                    onNavigationItemSelected(pagerAdapter.getPosition(R.string.Messages), 0)
+                }
+            }
+        }
+    }
+
+    /**
+     * App lifecycle management:
+     *
+     */
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        Log.d(TAG, "onCreate")
+        appPrefs = AppPrefs(this, "ovms")
+        database = Database(this)
+
+        // get/create App UUID:
+        uuid = appPrefs.getData("UUID")
+        if (uuid.isEmpty()) {
+            uuid = UUID.randomUUID().toString()
+            appPrefs.saveData("UUID", uuid)
+            Log.d(TAG, "onCreate: generated new UUID: $uuid")
+        } else {
+            Log.d(TAG, "onCreate: using UUID: $uuid")
+        }
+
+        // Check/create API key:
+        var apiKey = appPrefs.getData("APIKey")
+        if (apiKey.isEmpty()) {
+            apiKey = getRandomString(25)
+            appPrefs.saveData("APIKey", apiKey)
+            Log.d(TAG, "onCreate: generated new APIKey: $apiKey")
+        } else {
+            Log.d(TAG, "onCreate: using APIKey: $apiKey")
+        }
+
+        // OCM init:
+        getMapDetails = null
+        updateLocation = this
+        updateLocation()
+        // update connection list if OCM is enabled:
+        if (appPrefs.getData("option_ocm_enabled", "1") == "1") {
+            ConnectionList(this, this, true)
+        }
+
+        // Start background ApiService:
+        Log.i(TAG, "onCreate: starting ApiService")
+        try {
+            startService(Intent(this, ApiService::class.java))
+        } catch (e: Exception) {
+            Log.w(TAG, "onCreate: starting ApiService failed: $e")
+        }
+
+        // set up receiver for server communication service:
+        registerReceiver(apiEventReceiver, IntentFilter(ApiService.ACTION_APIEVENT))
+
+        // set up receiver for notifications:
+        registerReceiver(notificationReceiver, IntentFilter(ApiService.ACTION_NOTIFICATION))
+
+        // init UI tabs:
+        viewPager = ViewPager(this)
+        viewPager.setId(android.R.id.tabhost)
+        setContentView(viewPager)
+
+        // check for update, Google Play Services & permissions:
+        checkVersion()
+
+        // configure ActionBar:
+        val actionBar = supportActionBar
+        actionBar!!.setDisplayShowTitleEnabled(false)
+        actionBar.setDisplayShowHomeEnabled(true)
+
+        // Progress bar init:
+        val progressBar = ProgressBar(this)
+        progressBar.visibility = View.GONE
+        progressBar.isIndeterminate = true
+        actionBar.setDisplayShowCustomEnabled(true)
+        actionBar.customView = progressBar
+        pagerAdapter = MainPagerAdapter(
+            arrayOf(
+                TabInfo(
+                    R.string.Messages,
+                    R.drawable.ic_action_email,
+                    NotificationsFragment::class.java
+                ),
+                TabInfo(R.string.Battery, R.drawable.ic_action_battery, InfoFragment::class.java),
+                TabInfo(R.string.Car, R.drawable.ic_action_car, CarFragment::class.java),
+                TabInfo(R.string.Location, R.drawable.ic_action_location_map, MapFragment::class.java),
+                TabInfo(R.string.Settings, R.drawable.ic_action_settings, SettingsFragment::class.java)
+            )
+        )
+        viewPager.adapter = pagerAdapter
+        viewPager.offscreenPageLimit = pagerAdapter.count - 1
+        viewPager.addOnPageChangeListener(
+            object : SimpleOnPageChangeListener() {
+                override fun onPageSelected(position: Int) {
+                    actionBar.setSelectedNavigationItem(position)
+
+                    // cancel system notifications on page "Messages":
+                    if (pagerAdapter.getItemId(position) == R.string.Messages.toLong()) {
+                        val mNotificationManager =
+                            getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+                        mNotificationManager.cancelAll()
+                    }
+                }
+            })
+        actionBar.navigationMode = ActionBar.NAVIGATION_MODE_LIST
+        actionBar.setListNavigationCallbacks(
+            NavAdapter(this, pagerAdapter.tabInfoItems), this
+        )
+
+        // start on battery tab:
+        onNavigationItemSelected(pagerAdapter.getPosition(R.string.Battery), 0)
+
+        // process Activity startup intent:
+        onNewIntent(intent)
+    }
+
+    public override fun onNewIntent(newIntent: Intent?) {
+        if (newIntent == null) {
+            return
+        }
+        Log.d(TAG, "onNewIntent: $newIntent")
+        super.onNewIntent(newIntent)
+
+        // if launched from notification, switch to messages tab:
+        if (newIntent.getBooleanExtra("onNotification", false)) {
+            onNavigationItemSelected(pagerAdapter.getPosition(R.string.Messages), 0)
+        }
+    }
+
+    override fun onDestroy() {
+        Log.d(TAG, "onDestroy")
+        unregisterReceiver(apiEventReceiver)
+        unregisterReceiver(notificationReceiver)
+        database.close()
+
+        // Stop background ApiService?
+        val serviceEnabled = appPrefs.getData("option_service_enabled", "0") == "1"
+        if (!serviceEnabled) {
+            Log.i(TAG, "onDestroy: stopping ApiService")
+            stopService(Intent(this, ApiService::class.java))
+        }
+        super.onDestroy()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        Log.d(TAG, "onResume")
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+            gcmRegistrationBroadcastReceiver,
+            IntentFilter(ACTION_FCM_NEW_TOKEN)
+        )
+        onNewIntent(intent)
+    }
+
+    override fun onPause() {
+        Log.d(TAG, "onPause")
+        LocalBroadcastManager.getInstance(this)
+            .unregisterReceiver(gcmRegistrationBroadcastReceiver)
+        super.onPause()
+    }
+
+    override fun setSupportProgressBarIndeterminateVisibility(visible: Boolean) {
+        supportActionBar!!.customView.visibility = if (visible) View.VISIBLE else View.GONE
+    }
+
+    /**
+     * Check for update, show changes info
+     */
+    private fun checkVersion() {
+        try {
+            // get App version
+            val pInfo = packageManager.getPackageInfo(packageName, 0)
+            versionName = pInfo.versionName
+            versionCode = pInfo.versionCode
+            if (appPrefs.getData("lastUsedVersionName", "") != versionName) {
+                showVersion()
+            } else {
+                checkPlayServices()
+            }
+        } catch (e: PackageManager.NameNotFoundException) {
+            // ignore
+            checkPlayServices()
+        }
+    }
+
+    fun showVersion() {
+        val msg = TextView(this)
+        val scale = resources.displayMetrics.density
+        val pad = (25 * scale + 0.5f).toInt()
+        msg.setPadding(pad, pad, pad, pad)
+        msg.text = Html.fromHtml(getString(R.string.about_message))
+        msg.movementMethod = LinkMovementMethod.getInstance()
+        msg.isClickable = true
+        AlertDialog.Builder(this@MainActivity)
+            .setTitle(getString(R.string.about_title, versionName, versionCode))
+            .setView(msg)
+            .setPositiveButton(R.string.msg_ok) { dialog1: DialogInterface?, which: Int ->
+                appPrefs.saveData(
+                    "lastUsedVersionName",
+                    versionName
+                )
+            }
+            .setOnDismissListener { dialog12: DialogInterface? -> checkPlayServices() }
+            .show()
+    }
+
+    /**
+     * Check the device for Google Play Services, tell user if missing.
+     */
+    private fun checkPlayServices() {
+        if (appPrefs.getData("skipPlayServicesCheck", "0") == "1") {
+            return
+        }
+        val apiAvailability = GoogleApiAvailability.getInstance()
+        val resultCode = apiAvailability.isGooglePlayServicesAvailable(this)
+        if (resultCode != ConnectionResult.SUCCESS) {
+            AlertDialog.Builder(this@MainActivity)
+                .setTitle(R.string.common_google_play_services_install_title)
+                .setMessage(R.string.play_services_recommended)
+                .setPositiveButton(R.string.remind, null)
+                .setNegativeButton(R.string.dontremind) { dialog1: DialogInterface?, which: Int ->
+                    appPrefs.saveData(
+                        "skipPlayServicesCheck",
+                        "1"
+                    )
+                }
+                .setOnDismissListener { dialog12: DialogInterface? -> checkPermissions() }
+                .show()
+        } else {
+            checkPermissions()
+        }
+    }
+
+    /**
+     * Check / request permissions
+     */
+    private fun checkPermissions() {
+        val permissions = ArrayList<String>(2)
+        var showRationale = false
+
+        // ACCESS_FINE_LOCATION: needed for the "My location" map button
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
+            showRationale = ActivityCompat.shouldShowRequestPermissionRationale(
+                this, Manifest.permission.ACCESS_FINE_LOCATION
+            )
+        }
+
+        // POST_NOTIFICATIONS: needed on Android >= 13 to create notifications
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+            showRationale = showRationale or ActivityCompat.shouldShowRequestPermissionRationale(
+                this, Manifest.permission.POST_NOTIFICATIONS
+            )
+        }
+        if (permissions.isNotEmpty()) {
+            val permArray = arrayOfNulls<String>(permissions.size)
+            permissions.toArray(permArray)
+            if (showRationale) {
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle(R.string.needed_permissions_title)
+                    .setMessage(R.string.needed_permissions_message)
+                    .setNegativeButton(R.string.later, null)
+                    .setPositiveButton(R.string.msg_ok) { dialog1: DialogInterface?, which: Int ->
+                        ActivityCompat.requestPermissions(
+                            this@MainActivity,
+                            permArray,
+                            0
+                        )
+                    }
+                    .show()
+            } else {
+                ActivityCompat.requestPermissions(this@MainActivity, permArray, 0)
+            }
+        }
+    }
+
+    /**
+     * FCM push notification registration:
+     * - server login => gcmStartRegistration
+     * - init gcmSenderId specific FirebaseApp instance as needed
+     * - subscribe App instance to FCM broadcast channel (async)
+     * - get the App instance FCM token (async)
+     * - start GcmDoSubscribe for server push subscription (async, retries if necessary)
+     */
+    // onNewToken() callback also fires from getToken(), so we need a recursion inhibitor:
+    private fun gcmStartRegistration() {
+        val carData = loggedInCar
+            ?: return
+        val vehicleId = carData.sel_vehicleid
+
+        // Initialize App for server/car specific GCM sender ID:
+        var myApp = FirebaseApp.getInstance()
+        val defaults = myApp.options
+        val gcmSenderId = if (carData.sel_gcm_senderid.isNotEmpty()) {
+            carData.sel_gcm_senderid
+        } else {
+            defaults.gcmSenderId
+        }
+        Log.d(
+            TAG, "gcmStartRegistration: vehicleId=" + vehicleId
+                    + ", gcmSenderId=" + gcmSenderId
+        )
+        if (gcmSenderId != null && gcmSenderId != defaults.gcmSenderId) {
+            try {
+                myApp = FirebaseApp.getInstance(gcmSenderId)
+                Log.i(TAG, "gcmStartRegistration: reusing FirebaseApp " + myApp.name)
+            } catch (ex1: Exception) {
+                try {
+                    // Note: we assume here we can simply replace the sender ID. This has been tested
+                    //  successfully, but may need to be reconsidered & changed in the future.
+                    // It works because FirebaseMessaging relies on Metadata.getDefaultSenderId(),
+                    //  which prioritizes gcmSenderId if set. If gcmSenderId isn't set, it falls back
+                    //  to extracting the project number from the applicationId.
+                    // FCM token creation needs Project ID, Application ID and API key, but these
+                    //  currently don't need to match additional sender ID projects, so we can
+                    //  use the defaults. If/when this changes in the future, users will need to
+                    //  supply these three instead of the sender ID (or build the App using their
+                    //  "google-services.json" file).
+                    val myOptions = FirebaseOptions.Builder(defaults) //.setProjectId("…")
+                        //.setApplicationId("…")
+                        //.setApiKey("…")
+                        .setGcmSenderId(gcmSenderId)
+                        .build()
+                    myApp = FirebaseApp.initializeApp(this, myOptions, gcmSenderId)
+                    Log.i(TAG, "gcmStartRegistration: initialized new FirebaseApp " + myApp.name)
+                } catch (ex2: Exception) {
+                    Log.e(
+                        TAG,
+                        "gcmStartRegistration: failed to initialize FirebaseApp, skipping token registration",
+                        ex2
+                    )
+                    return
+                }
+            }
+        }
+
+        // Get messaging interface:
+        val myMessaging = myApp.get(FirebaseMessaging::class.java)
+
+        // Subscribe to broadcast channel:
+        myMessaging.subscribeToTopic(FCM_BROADCAST_TOPIC)
+            .addOnCompleteListener { task ->
+                if (!task.isSuccessful) {
+                    Log.e(TAG, "gcmStartRegistration: broadcast topic subscription failed")
+                } else {
+                    Log.i(TAG, "gcmStartRegistration: broadcast topic subscription done")
+                }
+            }
+
+        // Start OVMS server push subscription:
+        tokenRequested = true // inhibit onNewToken() callback
+        myMessaging.token
+            .addOnCompleteListener(OnCompleteListener<String> { task ->
+                tokenRequested = false // allow onNewToken() callback
+                if (!task.isSuccessful) {
+                    Log.w(
+                        TAG,
+                        "gcmStartRegistration: fetching FCM registration token failed",
+                        task.exception
+                    )
+                    return@OnCompleteListener
+                }
+                // as this is an async callback, verify we're still logged in as the initial vehicle:
+                if (!isLoggedIn(vehicleId)) {
+                    Log.d(
+                        TAG,
+                        "gcmStartRegistration: discard callback, logged in vehicle has changed"
+                    )
+                    return@OnCompleteListener
+                }
+                // Get FCM registration token
+                val token = task.result
+                Log.i(
+                    TAG, "gcmStartRegistration: vehicleId=" + vehicleId
+                            + ", gcmSenderId=" + gcmSenderId
+                            + " => token=" + token
+                )
+                // Start push subscription at OVMS server
+                gcmHandler.post(GcmDoSubscribe(vehicleId, token))
+            })
+    }
+
+    override fun onNavigationItemSelected(itemPosition: Int, itemId: Long): Boolean {
+        if (itemPosition < 0 || itemPosition >= pagerAdapter.count) return false
+        val ti: TabInfo = pagerAdapter.tabInfoItems[itemPosition]
+        supportActionBar!!.setIcon(ti.iconResId)
+        viewPager.setCurrentItem(itemPosition, false)
+        return true
+    }
+
+    override fun onConnectionChanged(al: String?, name: String?) {
+        // TODO Auto-generated method stub
+    }
+
+    override fun updateLocation() {
+        // get car location:
+        var lat = "37.410866"
+        var lng = "-122.001946"
+        if (appPrefs.getData("lat_main") == "") {
+            // init car position:
+            appPrefs.saveData("lat_main", lat)
+            appPrefs.saveData("lng_main", lng)
+            Log.i(TAG, "updatelocation: init car position")
+        } else {
+            // get current car position:
+            lat = appPrefs.getData("lat_main")
+            lng = appPrefs.getData("lng_main")
+        }
+
+        // Start OpenChargeMap task:
+        try {
+            val dLat = lat.toDouble()
+            val dLng = lng.toDouble()
+            startGetMapDetails(LatLng(dLat, dLng))
+        } catch (e: Exception) {
+            // ignore
+        }
+    }
+
+    private fun isMapCacheValid(center: LatLng): Boolean {
+        // As OCM does not yet support incremental queries,
+        // we're using a cache with key = int(lat/lng)
+        // resulting in a tile size of max. 112 x 112 km
+        // = diagonal max 159 km
+        // The API call will fetch a fixed radius of 160 km
+        // covering all adjacent tiles.
+
+        // check OCM cache for key int(lat/lng):
+        val latitude = center.latitude.toInt()
+        val longitude = center.longitude.toInt()
+        val cursor = database.getLatLngDetail(latitude, longitude)
+        val colLastUpdate = cursor.getColumnIndex("last_update")
+        if (cursor.count == 0) {
+            cursor.close()
+            return false
+        } else if (cursor.moveToFirst()) {
+            // check if last tile update was more than 24 hours ago:
+            val lastUpdate = if (colLastUpdate >= 0) cursor.getLong(colLastUpdate) else 0
+            val now = System.currentTimeMillis() / 1000
+            if (now > lastUpdate + 3600 * 24) {
+                cursor.close()
+                return false
+            }
+        }
+        Log.v(TAG, "isMapCacheValid: cache valid for lat/lng=$latitude/$longitude")
+        cursor.close()
+        return true
+    }
+
+    fun startGetMapDetails(center: LatLng) {
+        if (!isMapCacheValid(center)) {
+            getMapDetailList.add(center)
+            startGetMapDetails()
+        } else {
+            Log.v(TAG, "StartGetMapDetails: map cache valid for center=$center")
+        }
+    }
+
+    private fun startGetMapDetails() {
+        // check if task is still running:
+        if (getMapDetails != null && getMapDetails!!.status != AsyncTask.Status.FINISHED) {
+            return
+        }
+        // check if error block period is active:
+        if (System.currentTimeMillis() < getMapDetailsBlockUntil) {
+            return
+        }
+        // check if OCM has been disabled:
+        if (appPrefs.getData("option_ocm_enabled", "1") == "0") {
+            return
+        }
+        do {
+            // get next coordinates to fetch:
+            if (getMapDetailList.isEmpty()) {
+                Log.i(TAG, "StartGetMapDetails: done.")
+                return
+            }
+            val center = getMapDetailList.removeAt(0)
+            if (isMapCacheValid(center!!)) {
+                continue
+            }
+
+            // create new fetcher task:
+            Log.i(TAG, "StartGetMapDetails: starting task for $center")
+            getMapDetails = GetMapDetails(this@MainActivity, center, this)
+            getMapDetails!!.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
+            return
+        } while (true)
+    }
+
+    override fun getMapDetailsDone(isSuccess: Boolean, center: LatLng?) {
+        if (isSuccess) {
+            // mark cache tile valid:
+            Log.i(TAG, "getMapDetailsDone: OCM updates received for $center")
+            database.addLatLngDetail(center!!.latitude.toInt(), center.longitude.toInt())
+            // update map:
+            val frg = pagerAdapter.getItemByTitle(R.string.Location) as MapFragment?
+            if (frg != null) {
+                Log.d(TAG, "getMapDetailsDone: OCM updates received => calling FragMap.update()")
+                frg.update()
+            }
+            // clear blocking:
+            getMapDetailsBlockUntil = 0
+            getMapDetailsBlockSeconds = 0
+            // check for next fetch job:
+            startGetMapDetails()
+        } else {
+            Log.e(TAG, "getMapDetailsDone: OCM updates failed for $center")
+            // increase blocking time up to 120 seconds:
+            if (getMapDetailsBlockSeconds < 120) {
+                getMapDetailsBlockSeconds += 10
+            }
+            Log.d(
+                TAG,
+                "getMapDetailsDone: blocking OCM API calls for $getMapDetailsBlockSeconds seconds"
+            )
+            getMapDetailsBlockUntil = System.currentTimeMillis() + 1000 * getMapDetailsBlockSeconds
+            // schedule retry:
+            if (getMapDetailsBlockSeconds < 120) {
+                getMapDetailsHandler.postDelayed(
+                    { startGetMapDetails(center!!) },
+                    1000 * getMapDetailsBlockSeconds
+                )
+            } else {
+                Log.w(TAG, "getMapDetailsDone: maximum block time reached, no further retries")
+                // Note: retry blocking will be resolved by the next regular fetch from a vehicle movement
+            }
+        }
+    }
+
+    /*
+     * Inner types
+     */
+
+    companion object {
+        private const val TAG = "MainActivity"
+        const val ACTION_FCM_NEW_TOKEN = "fcmNewToken"
+        private const val FCM_BROADCAST_TOPIC = "global"
+        @JvmField
+        var updateLocation: UpdateLocation? = null
+    }
+
+    private inner class GcmDoSubscribe(
+        private val vehicleId: String,
+        private val token: String
+    ) : Runnable {
+
+        private val tag = "GcmDoSubscribe"
+
+        override fun run() {
+            val service = service
+            if (service == null) {
+                Log.d(tag, "ApiService terminated, cancelling")
+                return
+            } else if (!service.isLoggedIn()) {
+                Log.d(tag, "ApiService not yet logged in, scheduling retry")
+                gcmHandler.postDelayed(this, 5000)
+                return
+            }
+            val carData = service.getCarData()
+            if (carData?.sel_vehicleid == null || carData.sel_vehicleid.isEmpty()) {
+                Log.d(tag, "ApiService not logged in / has no defined car, cancelling")
+                return
+            }
+
+            // Async operation, verify we're still logged in to the same vehicle:
+            if (carData.sel_vehicleid != vehicleId) {
+                Log.d(tag, "ApiService logged in to different car, cancelling")
+                return
+            }
+
+            // Subscribe at OVMS server:
+            Log.d(tag, "subscribing vehicle ID $vehicleId to FCM token $token")
+            // MP-0 p<appid>,<pushtype>,<pushkeytype>{,<vehicleid>,<netpass>,<pushkeyvalue>}
+            val cmd = String.format(
+                "MP-0 p%s,gcm,production,%s,%s,%s",
+                uuid, carData.sel_vehicleid, carData.sel_server_password, token
+            )
+            if (!service.sendCommand(cmd, null)) {
+                Log.w(tag, "FCM server push subscription failed, scheduling retry")
+                gcmHandler.postDelayed(this, 5000)
+            } else {
+                Log.i(tag, "FCM server push subscription done")
+            }
+        }
+    }
+
+    /**
+     * User interface handling:
+     *
+     */
+    private inner class TabInfo(
+        val titleResId: Int,
+        val iconResId: Int,
+        val fragmentClass: Class<out BaseFragment?>
+    ) {
+        var fragment: Fragment? = null
+        val fragmentName: String
+            get() = fragmentClass.getName()
+
+        override fun toString(): String {
+            return getString(titleResId)
+        }
+    }
+
+
+    private class NavAdapter(
+        context: Context,
+        objects: Array<TabInfo>
+    ) : ArrayAdapter<TabInfo?>(
+        context,
+        android.R.layout.simple_spinner_item,
+        objects
+    ) {
+        init {
+            setDropDownViewResource(R.layout.support_simple_spinner_dropdown_item)
+        }
+
+        override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
+            val tv = super.getDropDownView(
+                position,
+                convertView, parent
+            ) as TextView
+            tv.setCompoundDrawablesWithIntrinsicBounds(
+                getItem(position)!!.iconResId, 0, 0, 0
+            )
+            return tv
+        }
+    }
+
+    private inner class MainPagerAdapter(
+        tabInfoItems: Array<TabInfo>
+    ) : FragmentPagerAdapter(supportFragmentManager) {
+
+        val tabInfoItems: Array<TabInfo>
+
+        init {
+            this.tabInfoItems = tabInfoItems
+        }
+
+        override fun getItem(position: Int): Fragment {
+            if (tabInfoItems[position].fragment == null) {
+                // instantiate fragment:
+                tabInfoItems[position].fragment = Fragment.instantiate(
+                    this@MainActivity,
+                    tabInfoItems[position].fragmentName
+                )
+            }
+            Log.d(
+                TAG,
+                "MainPagerAdapter: pos=" + position + " => frg=" + tabInfoItems[position].fragment
+            )
+            return tabInfoItems[position].fragment!!
+        }
+
+        fun getItemByTitle(pTitle: Int): Fragment {
+            return getItem(getPosition(pTitle))
+        }
+
+        override fun getCount(): Int {
+            return tabInfoItems.size
+        }
+
+        override fun getItemId(position: Int): Long {
+            // use Title String resource id as Item id:
+            return tabInfoItems[position].titleResId.toLong()
+        }
+
+        fun getPosition(itemId: Int): Int {
+            for (p in tabInfoItems.indices) {
+                if (tabInfoItems[p].titleResId == itemId) {
+                    return p
+                }
+            }
+            return -1
+        }
+
+        override fun getPageTitle(position: Int): CharSequence {
+            return getString(tabInfoItems[position].titleResId)
+        }
+    }
 }

@@ -53,7 +53,7 @@ class ControlParametersFragment : BaseFragment(), OnResultCommandListener, OnIte
         activity?.setTitle(R.string.Parameters)
     }
 
-    override fun onServiceAvailable(service: ApiService?) {
+    override fun onServiceAvailable(service: ApiService) {
         this.service = service
         requestData()
     }

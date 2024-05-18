@@ -297,7 +297,7 @@ class LogsFragment
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
-        compatActivity.setTitle(R.string.logs_title)
+        compatActivity?.setTitle(R.string.logs_title)
 
         // get data of car to edit:
         editPosition = requireArguments().getInt("position", -1)

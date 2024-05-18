@@ -41,7 +41,6 @@ import com.google.android.gms.maps.model.PatternItem;
 import com.openvehicles.OVMS.utils.AppPrefs;
 import com.openvehicles.OVMS.R;
 import com.openvehicles.OVMS.entities.CarData;
-import com.openvehicles.OVMS.ui.GetMapDetails.GetMapDetailsListener;
 import com.openvehicles.OVMS.ui.utils.Database;
 import com.openvehicles.OVMS.ui.utils.DemoClusterOptionsProvider;
 import com.openvehicles.OVMS.ui.utils.MarkerGenerator;
@@ -55,8 +54,8 @@ import androidx.core.content.ContextCompat;
 import androidx.core.content.res.ResourcesCompat;
 import androidx.fragment.app.FragmentManager;
 
-public class FragMap extends BaseFragment implements OnInfoWindowClickListener,
-		GetMapDetailsListener, OnClickListener, FragMapSettings.UpdateMap, OnMapReadyCallback {
+public class MapFragment extends BaseFragment implements OnInfoWindowClickListener,
+		GetMapDetailsListener, OnClickListener, MapSettingsFragment.UpdateMap, OnMapReadyCallback {
 	private static final String TAG = "FragMap";
 
 	private GoogleMap map;
@@ -73,7 +72,7 @@ public class FragMap extends BaseFragment implements OnInfoWindowClickListener,
 	MenuItem autoTrackMenuItem;
 	boolean autotrack = true;
 	float mapZoomLevel = 15;
-	static FragMapSettings.UpdateMap updateMap;
+	static MapSettingsFragment.UpdateMap updateMap;
 
 	private CarData mCarData;
 	private LatLng carPosition = new LatLng(0,0);
@@ -83,7 +82,7 @@ public class FragMap extends BaseFragment implements OnInfoWindowClickListener,
 	List<Marker> markerList;
 
 	public interface UpdateLocation {
-		public void updatelocation();
+		public void updateLocation();
 	}
 
 
@@ -212,7 +211,7 @@ public class FragMap extends BaseFragment implements OnInfoWindowClickListener,
 				// fetch chargepoints for view:
 				CameraPosition cameraPosition = map.getCameraPosition();
 				Log.i(TAG, "getMap/onCameraIdle: get charge points for " + cameraPosition.target);
-				mainActivity.StartGetMapDetails(cameraPosition.target);
+				mainActivity.startGetMapDetails(cameraPosition.target);
 			}
 		});
 
@@ -320,7 +319,7 @@ public class FragMap extends BaseFragment implements OnInfoWindowClickListener,
 			updateMapDetails(false);
 		} else if (menuId == R.id.mi_map_settings) {
 			Bundle args = new Bundle();
-			BaseFragmentActivity.show(getActivity(), FragMapSettings.class, args,
+			BaseFragmentActivity.show(getActivity(), MapSettingsFragment.class, args,
 					Configuration.ORIENTATION_UNDEFINED);
 		}
 
@@ -373,8 +372,8 @@ public class FragMap extends BaseFragment implements OnInfoWindowClickListener,
 
 	// after fetch value from server
 	@Override
-	public void getMapDetailsDone(boolean success, LatLng center) {
-		updateMapDetails(success);
+	public void getMapDetailsDone(boolean isSuccess, LatLng center) {
+		updateMapDetails(isSuccess);
 	}
 
 	public void updateMapDetails(boolean clearmap) {
@@ -560,7 +559,7 @@ public class FragMap extends BaseFragment implements OnInfoWindowClickListener,
 		appPrefs.saveData("lat_main", "" + mCarData.car_latitude);
 		appPrefs.saveData("lng_main", "" + mCarData.car_longitude);
 
-		MainActivity.updateLocation.updatelocation();
+		MainActivity.updateLocation.updateLocation();
 
 	}
 
@@ -637,7 +636,7 @@ public class FragMap extends BaseFragment implements OnInfoWindowClickListener,
 	@Override
 	public void clearCache() {
 		database.clearMapDetails();
-		MainActivity.updateLocation.updatelocation();
+		MainActivity.updateLocation.updateLocation();
 	}
 
 	@Override

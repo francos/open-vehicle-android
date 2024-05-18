@@ -515,7 +515,7 @@ class ApiService : Service(), ApiTask.ApiTaskListener, ApiObserver {
     }
 
     // ApiObserver interface:
-    override fun onServiceAvailable(service: ApiService?) {
+    override fun onServiceAvailable(service: ApiService) {
         // nop
     }
 

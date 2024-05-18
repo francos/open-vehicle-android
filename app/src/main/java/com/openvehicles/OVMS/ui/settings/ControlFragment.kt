@@ -42,8 +42,8 @@ class ControlFragment
             carData = getStoredCars()[editPosition]
         }
         connectionList = ConnectionList(requireActivity(), this, false)
-        compatActivity.supportActionBar!!.setIcon(R.drawable.ic_action_control)
-        compatActivity.setTitle(R.string.Control)
+        compatActivity?.supportActionBar!!.setIcon(R.drawable.ic_action_control)
+        compatActivity?.setTitle(R.string.Control)
         val rootView = view
         setOnClick(rootView!!, R.id.btn_features, this)
         setOnClick(rootView, R.id.btn_parameters, this)

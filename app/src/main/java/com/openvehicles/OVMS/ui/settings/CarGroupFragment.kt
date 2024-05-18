@@ -40,10 +40,10 @@ class CarGroupFragment
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
 
-        compatActivity.setTitle(R.string.cargroup_title)
+        compatActivity?.setTitle(R.string.cargroup_title)
     }
 
-    override fun onServiceAvailable(service: ApiService?) {
+    override fun onServiceAvailable(service: ApiService) {
         // nop
     }
 

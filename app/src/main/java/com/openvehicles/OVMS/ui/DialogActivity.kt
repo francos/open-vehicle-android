@@ -1,82 +1,82 @@
-package com.openvehicles.OVMS.ui;
+package com.openvehicles.OVMS.ui
 
-import android.content.Context;
-import android.content.Intent;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.util.Log;
-import android.widget.ScrollView;
-import android.widget.TextView;
-
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-
+import android.content.Context
+import android.content.Intent
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
+import android.view.View
+import android.widget.ScrollView
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
 
 /**
  * DialogActivity: custom Toast replacement triggered by an Intent, key advantages:
- * 	- not limited to 2 lines on API >= 31
- * 	- working from background (service) on Huawei devices (only on API < ?)
- * 	- custom title
- * 	- scrollable text content
- * 	- user can keep message on screen by interacting with it (holding/scrolling)
+ * - not limited to 2 lines on API >= 31
+ * - working from background (service) on Huawei devices (only on API < ?)
+ * - custom title
+ * - scrollable text content
+ * - user can keep message on screen by interacting with it (holding/scrolling)
  *
  * Use the show() utility method to invoke.
  *
  * TODO: this may need a queue if new messages can come in while one
- *       is still displayed -- not sure if that's actually needed
+ * is still displayed -- not sure if that's actually needed
  */
-public class DialogActivity extends AppCompatActivity {
-	private static final String TAG = "DialogActivity";
+class DialogActivity : AppCompatActivity() {
 
-	private final int DISPLAY_TIMEOUT = 5000;		// Milliseconds
+    private val timeoutHandler = Handler(Looper.getMainLooper())
+    private val onTimeout = Runnable { finish() }
 
-	private final Handler mTimeoutHandler = new Handler(Looper.getMainLooper());
-	private final Runnable onTimeout = this::finish;
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
-	public static void show(Context context, CharSequence title, CharSequence text) {
-		Intent intent = new Intent(context.getApplicationContext(), DialogActivity.class);
-		intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-		intent.putExtra("title", title);
-		intent.putExtra("text", text);
-		context.startActivity(intent);
-	}
+        if (intent == null) {
+            finish()
+            return
+        }
+        val title = intent.getCharSequenceExtra("title")
+        val text = intent.getCharSequenceExtra("text")
+        Log.d(TAG, "onCreate: title=$title")
+        val textView = TextView(this).apply {
+            this.text = text
+            setPadding(20, 10, 20, 20)
+            setOnClickListener { _ -> finish() }
+        }
 
-	@Override
-	protected void onCreate(@Nullable Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
+        val scrollView = ScrollView(this)
+        scrollView.addView(textView)
+        setTitle(title)
+        setContentView(scrollView)
+        timeoutHandler.postDelayed(onTimeout, DISPLAY_TIMEOUT.toLong())
+    }
 
-		Intent intent = getIntent();
-		if (intent == null) {
-			finish();
-			return;
-		}
+    override fun onUserInteraction() {
+        timeoutHandler.removeCallbacks(onTimeout)
+    }
 
-		CharSequence title = intent.getCharSequenceExtra("title");
-		CharSequence text = intent.getCharSequenceExtra("text");
-		Log.d(TAG, "onCreate: title=" + title);
+    override fun onUserLeaveHint() {
+        finish()
+    }
 
-		TextView textView = new TextView(this);
-		textView.setText(text);
-		textView.setPadding(20,10,20,20);
-		textView.setOnClickListener(v -> finish());
+    /*
+     * Inner types
+     */
 
-		ScrollView scrollView = new ScrollView(this);
-		scrollView.addView(textView);
+    companion object {
 
-		setTitle(title);
-		setContentView(scrollView);
+        private const val TAG = "DialogActivity"
+        private const val DISPLAY_TIMEOUT = 5000 // Milliseconds
 
-		mTimeoutHandler.postDelayed(onTimeout, DISPLAY_TIMEOUT);
-	}
+        fun show(context: Context, title: CharSequence?, text: CharSequence?) {
+            val intent = Intent(context.applicationContext, DialogActivity::class.java).apply {
+                setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                putExtra("title", title)
+                putExtra("text", text)
+            }
 
-	@Override
-	public void onUserInteraction() {
-		mTimeoutHandler.removeCallbacks(onTimeout);
-	}
-
-	@Override
-	protected void onUserLeaveHint() {
-		finish();
-	}
+            context.startActivity(intent)
+        }
+    }
 }
