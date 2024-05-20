@@ -126,7 +126,7 @@ class MapSettingsFragment : Fragment(), ConnectionsListener {
 
     interface UpdateMap {
 
-        fun updateClustering(clusterSizeIndex: Int, enabled: Boolean)
+        fun updateClustering(clusterSizeIndex: Int, isEnabled: Boolean)
 
         fun clearCache()
 

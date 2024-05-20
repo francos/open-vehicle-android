@@ -1,476 +1,467 @@
-package com.openvehicles.OVMS.ui;
-
-import android.app.NotificationManager;
-import android.content.ClipData;
-import android.content.Context;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.content.res.Configuration;
-import android.graphics.Typeface;
-import android.os.Bundle;
-import android.text.Html;
-import android.text.util.Linkify;
-import android.util.Log;
-import android.util.TypedValue;
-import android.view.KeyEvent;
-import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
-import android.view.View;
-import android.view.ViewGroup;
-import android.view.inputmethod.EditorInfo;
-import android.view.inputmethod.InputMethodManager;
-import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemClickListener;
-import android.widget.ArrayAdapter;
-import android.widget.EditText;
-import android.widget.ImageView;
-import android.widget.ListView;
-import android.widget.RelativeLayout;
-import android.widget.TextView;
-import android.widget.Toast;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
-
-import com.openvehicles.OVMS.R;
-import com.openvehicles.OVMS.api.ApiService;
-import com.openvehicles.OVMS.api.OnResultCommandListener;
-import com.openvehicles.OVMS.entities.CarData;
-import com.openvehicles.OVMS.utils.AppPrefs;
-import com.openvehicles.OVMS.ui.settings.StoredCommandFragment;
-import com.openvehicles.OVMS.ui.utils.Ui;
-import com.openvehicles.OVMS.utils.CarsStorage;
-import com.openvehicles.OVMS.utils.NotificationData;
-import com.openvehicles.OVMS.utils.OVMSNotifications;
-
-import java.text.SimpleDateFormat;
-
-
-public class NotificationsFragment extends BaseFragment
-		implements OnItemClickListener, AdapterView.OnItemLongClickListener,
-		TextView.OnEditorActionListener, OnResultCommandListener {
-	private static final String TAG = "NotificationsFragment";
-
-	private ListView mListView;
-	private ItemsAdapter mItemsAdapter;
-	private OVMSNotifications mNotifications;
-
-	private EditText mCmdInput;
-
-	private AppPrefs appPrefs;
-	public boolean mFontMonospace = false;
-	public boolean mFilterList = false, mFilterInfo = false, mFilterAlert = false;
-	public float mFontSize = 10;
-
-	public String mVehicleId;
-
-	
-	@Override
-	public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-
-		// Load prefs:
-		appPrefs = new AppPrefs(requireActivity(), "ovms");
-
-		mFontMonospace = appPrefs.getData("notifications_font_monospace").equals("on");
-		try {
-			mFontSize = Float.parseFloat(appPrefs.getData("notifications_font_size"));
-		} catch(Exception e) {
-			mFontSize = 10;
-		}
-
-		mFilterList = appPrefs.getData("notifications_filter_list").equals("on");
-		mFilterInfo = appPrefs.getData("notifications_filter_info").equals("on");
-		mFilterAlert = appPrefs.getData("notifications_filter_alert").equals("on");
-
-		// Create UI:
-
-		RelativeLayout layout = (RelativeLayout) inflater.inflate(R.layout.fragment_notifications, null);
-
-		mListView = (ListView) layout.findViewById(R.id.listView);
-		mListView.setOnItemClickListener(this);
-		mListView.setOnItemLongClickListener(this);
-
-		mCmdInput = (EditText) layout.findViewById(R.id.cmdInput);
-		mCmdInput.setOnEditorActionListener(this);
-		mCmdInput.setTextSize(TypedValue.COMPLEX_UNIT_SP, mFontSize*1.2f);
-
-		setHasOptionsMenu(true);
-
-		return layout;
-	}
-
-	@Override
-	public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
-		inflater.inflate(R.menu.notifications_options, menu);
-		menu.findItem(R.id.mi_chk_monospace).setChecked(mFontMonospace);
-		menu.findItem(R.id.mi_chk_filter_list).setChecked(mFilterList);
-		menu.findItem(R.id.mi_chk_filter_info).setChecked(mFilterInfo);
-		menu.findItem(R.id.mi_chk_filter_alert).setChecked(mFilterAlert);
-	}
-
-	@Override
-	public void onResume() {
-		super.onResume();
-
-		// cancel Android system notification:
-		NotificationManager mNotificationManager = (NotificationManager)
-				requireActivity().getSystemService(Context.NOTIFICATION_SERVICE);
-		mNotificationManager.cancelAll();
-
-		// update list:
-		mVehicleId = CarsStorage.INSTANCE.getLastSelectedCarId();
-		update();
-	}
-
-	@Override
-	public void onItemClick(@NonNull AdapterView<?> parent, View view, int position, long id) {
-
-		NotificationData data = (NotificationData) parent.getAdapter().getItem(position);
-
-		if (data.Type == NotificationData.TYPE_COMMAND) {
-			// use as history:
-			mCmdInput.setText(data.Message);
-			mCmdInput.requestFocus();
-			mCmdInput.postDelayed(new Runnable() {
-				@Override
-				public void run() {
-					InputMethodManager keyboard = (InputMethodManager)
-							requireActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
-					keyboard.showSoftInput(mCmdInput, 0);
-				}
-			},200);
-
-		} else {
-			// display:
-			Log.d(TAG, "Displaying notification: #" + position);
-			AlertDialog dialog = new AlertDialog.Builder(parent.getContext())
-					.setIcon(data.getIcon())
-					.setTitle(data.Title)
-					.setMessage(data.getMessageFormatted())
-					.setCancelable(false)
-					.setPositiveButton(R.string.Close, new DialogInterface.OnClickListener() {
-						@Override
-						public void onClick(DialogInterface dialog, int which) {
-							dialog.dismiss();
-						}
-					})
-					.show();
-
-			TextView textView = (TextView) dialog.findViewById(android.R.id.message);
-			if (textView != null) {
-				if (mFontMonospace) {
-					textView.setTypeface(Typeface.MONOSPACE);
-				}
-				textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, mFontSize * 1.2f);
-				Linkify.addLinks(textView, Linkify.WEB_URLS);
-			}
-
-		}
-	}
-
-
-	@Override
-	public boolean onItemLongClick(@NonNull AdapterView<?> parent, View view, int position, long id) {
-		Log.d(TAG, "Long click on notification: #" + position);
-
-		// copy message text to clipboard:
-
-		NotificationData data = (NotificationData) parent.getAdapter().getItem(position);
-		String message = data.getMessageFormatted();
-
-		android.content.ClipboardManager clipboard = (android.content.ClipboardManager)
-				requireActivity().getSystemService(Context.CLIPBOARD_SERVICE);
-		ClipData clip = ClipData.newPlainText("label", message);
-		clipboard.setPrimaryClip(clip);
-
-		Toast.makeText(getContext(),
-				R.string.notifications_toast_copied, Toast.LENGTH_SHORT).show();
-
-		return true;
-	}
-
-	@Override
-	public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-
-		int menuId = item.getItemId();
-		boolean newState = !item.isChecked();
-
-		if (menuId == R.id.mi_help) {
-			new AlertDialog.Builder(getContext())
-					.setTitle(R.string.notifications_btn_help)
-					.setMessage(Html.fromHtml(getString(R.string.notifications_help)))
-					.setPositiveButton(android.R.string.ok, null)
-					.show();
-			return true;
-		} else if (menuId == R.id.mi_chk_filter_list) {
-			mFilterList = newState;
-			appPrefs.saveData("notifications_filter_list", newState ? "on" : "off");
-			item.setChecked(newState);
-			initList();
-			return true;
-		} else if (menuId == R.id.mi_chk_filter_info) {
-			mFilterInfo = newState;
-			appPrefs.saveData("notifications_filter_info", newState ? "on" : "off");
-			item.setChecked(newState);
-			return true;
-		} else if (menuId == R.id.mi_chk_filter_alert) {
-			mFilterAlert = newState;
-			appPrefs.saveData("notifications_filter_alert", newState ? "on" : "off");
-			item.setChecked(newState);
-			return true;
-		} else if (menuId == R.id.mi_chk_monospace) {
-			mFontMonospace = newState;
-			appPrefs.saveData("notifications_font_monospace", newState ? "on" : "off");
-			item.setChecked(newState);
-			mItemsAdapter.notifyDataSetChanged();
-			return true;
-		} else if (menuId == R.id.mi_set_fontsize) {
-			Ui.showPinDialog(getActivity(),
-					getString(R.string.notifications_set_fontsize),
-					Float.toString(mFontSize), R.string.Set, false,
-					new Ui.OnChangeListener<String>() {
-						@Override
-						public void onAction(String data) {
-							float val;
-							try {
-								val = Float.parseFloat(data);
-							} catch (Exception e) {
-								val = 10;
-							}
-							mFontSize = val;
-							appPrefs.saveData("notifications_font_size",
-									Float.toString(mFontSize));
-							mItemsAdapter.notifyDataSetChanged();
-							mCmdInput.setTextSize(TypedValue.COMPLEX_UNIT_SP, mFontSize * 1.2f);
-						}
-					});
-			return true;
-		} else if (menuId == R.id.mi_stored_commands) {
-			BaseFragmentActivity.showForResult(this, StoredCommandFragment.class,
-					StoredCommandFragment.REQUEST_SELECT_EXECUTE, null,
-					Configuration.ORIENTATION_UNDEFINED);
-			return false;
-		}
-
-		return super.onOptionsItemSelected(item);
-	}
-
-	@Override
-	public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-		String command = null;
-		if (data != null) {
-			command = data.getStringExtra("command");
-		}
-		Log.d(TAG, "onActivityResult: reqCode=" + requestCode + ", resCode=" + resultCode + ", command: " + command);
-		sendUserCommand(command);
-	}
-
-	public void update() {
-		initList();
-	}
-
-	@Override
-	public void update(CarData carData) {
-		super.update(carData);
-
-		// check if the car filter needs to be reapplied:
-		if (mFilterList && !carData.sel_vehicleid.equals(mVehicleId)) {
-			String vehicleId = CarsStorage.INSTANCE.getLastSelectedCarId();
-			if (vehicleId != null && !vehicleId.equals(mVehicleId)) {
-				Log.d(TAG, "update: vehicle changed to '" + vehicleId + "' => filter reload");
-				mVehicleId = vehicleId;
-				initList();
-			}
-		}
-	}
-
-	private void initList() {
-		Context context = getActivity();
-		if (context == null) return;
-
-		Log.d(TAG, "initUi: (re-)loading notifications, filter=" + mFilterInfo + ", vehicle=" + mVehicleId);
-
-		// (re-)load notifications:
-		// TODO: this scheme of recreating the OVMSNotifications object on every change is a PITA,
-		//       it needs to be replaced by a singleton or service
-		mNotifications = new OVMSNotifications(context);
-		NotificationData[] data = mNotifications.getArray(mFilterList ? mVehicleId : "");
-
-		// attach array to ListView:
-		mItemsAdapter = new ItemsAdapter(context, this, data);
-		mListView.setAdapter(mItemsAdapter);
-	}
-
-	// ATTENTION: use this only to display local updates to mNotifications!
-	//            (will not show changes from other OVMSNotifications instances)
-	private void updateList() {
-		Context context = getActivity();
-		if (context == null) return;
-
-		if (mNotifications == null || mItemsAdapter == null) {
-			initList();
-		} else {
-			NotificationData[] data = mNotifications.getArray(mFilterList ? mVehicleId : "");
-			mItemsAdapter = new ItemsAdapter(context, this, data);
-			mListView.setAdapter(mItemsAdapter);
-		}
-	}
-
-	private int lastCommandSent = 0;
-
-	@Override
-	public boolean onEditorAction(TextView textView, int actionId, KeyEvent keyEvent) {
-		boolean handled = false;
-		if (actionId == EditorInfo.IME_ACTION_SEND) {
-			String userCmd = textView.getText().toString();
-			handled = sendUserCommand(userCmd);
-		}
-		return handled;
-	}
-
-	public boolean sendUserCommand(String userCmd) {
-		if (userCmd == null || userCmd.isEmpty())
-			return false;
-
-		if (mNotifications == null)
-			initList();
-
-		// Add command to history:
-		String vehicle_id = CarsStorage.INSTANCE.getLastSelectedCarId();
-		mNotifications.addNotification(
-				NotificationData.TYPE_COMMAND, vehicle_id + ": " + userCmd, userCmd);
-		updateList();
-
-		// Send command:
-		String mpCmd = ApiService.Companion.makeMsgCommand(userCmd);
-		String[] cp = mpCmd.split(",");
-		try {
-			lastCommandSent = Integer.parseInt(cp[0]);
-			sendCommand(userCmd, mpCmd, this);
-			return true;
-		} catch (Exception e) {
-			Toast.makeText(getActivity(), getString(R.string.err_unimplemented_operation),
-					Toast.LENGTH_SHORT).show();
-			return false;
-		}
-	}
-
-	@Override
-	public void onResultCommand(@NonNull String[] result) {
-		if (result.length <= 1)
-			return;
-
-		if (mNotifications == null)
-			initList();
-
-		int command = Integer.parseInt(result[0]);
-		String cmdMessage = getSentCommandMessage(result[0]);
-		int resCode = Integer.parseInt(result[1]);
-
-		if (command != 7 && command != 41 && command != 49 && command != lastCommandSent)
-			return; // not for us
-
-		String cmdOutput = null;
-		if (result.length >= 3 && result[2] != null) {
-			cmdOutput = result[2];
-			for (int i = 3; i < result.length; i++)
-				cmdOutput += "," + result[i];
-		}
-
-		String vehicle_id = CarsStorage.INSTANCE.getLastSelectedCarId();
-
-		switch (resCode) {
-			case 0: // ok: result[2] = command output
-				int type = (command == 41) ? NotificationData.TYPE_USSD
-						: NotificationData.TYPE_RESULT_SUCCESS;
-				// suppress first (empty) OK result for cmd 41:
-				if (command == 7 || cmdOutput != null) {
-					cancelCommand();
-					mNotifications.addNotification(
-							type, vehicle_id + ": " + cmdMessage,
-							(cmdOutput != null) ? cmdOutput : getString(R.string.msg_ok));
-					updateList();
-				}
-				break;
-			case 1: // failed: result[2] = command output
-				cancelCommand();
-				mNotifications.addNotification(
-						NotificationData.TYPE_RESULT_ERROR, vehicle_id + ": " + cmdMessage,
-						getString(R.string.err_failed_smscmd));
-				updateList();
-				break;
-			case 2: // unsupported
-				cancelCommand();
-				if (getActivity() != null) {
-					Toast.makeText(getActivity(), cmdMessage + " => " + getString(R.string.err_unsupported_operation),
-							Toast.LENGTH_SHORT).show();
-				}
-				break;
-			case 3: // unimplemented
-				cancelCommand();
-				if (getActivity() != null) {
-					Toast.makeText(getActivity(), cmdMessage + " => " + getString(R.string.err_unimplemented_operation),
-							Toast.LENGTH_SHORT).show();
-				}
-				break;
-		}
-	}
-
-
-	private static class ItemsAdapter extends ArrayAdapter<NotificationData> {
-		private final LayoutInflater mInflater;
-		private final SimpleDateFormat mDateFormat = new SimpleDateFormat("MMM d, HH:mm");
-		private final NotificationsFragment mFragment;
-
-		public ItemsAdapter(Context context, NotificationsFragment fragment, NotificationData[] items) {
-			super(context, R.layout.item_notifications, items);
-			mInflater = LayoutInflater.from(context);
-			mFragment = fragment;
-		}
-
-		@NonNull
-		@Override
-		public View getView(int position, View convertView, @NonNull ViewGroup parent) {
-			View v = convertView;
-			if (v == null) {
-				v = mInflater.inflate(R.layout.item_notifications, null);
-			}
-
-			NotificationData it = getItem(position);
-			if (it != null) {
-
-				// set icon according to notification type:
-				ImageView iv = (ImageView) v.findViewById(R.id.textNotificationsIcon);
-				iv.setImageResource(it.getIcon());
-
-				// set title, message & timestamp:
-				TextView tv = (TextView) v.findViewById(R.id.textNotificationsListTitle);
-				tv.setText(it.Title);
-
-				tv = (TextView) v.findViewById(R.id.textNotificationsListMessage);
-
-				if (mFragment.mFontMonospace) {
-					tv.setTypeface(Typeface.MONOSPACE);
-				} else {
-					tv.setTypeface(Typeface.DEFAULT);
-				}
-				tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, mFragment.mFontSize);
-
-				if (it.Type == NotificationData.TYPE_COMMAND) {
-					tv.setVisibility(View.GONE); // cmd shown in title
-				} else {
-					tv.setVisibility(View.VISIBLE);
-					tv.setText(it.getMessageFormatted());
-				}
-
-				tv = (TextView) v.findViewById(R.id.textNotificationsListTimestamp);
-				tv.setText(mDateFormat.format(it.Timestamp));
-
-			}
-			return v;
-		}
-	}
+package com.openvehicles.OVMS.ui
+
+import android.app.NotificationManager
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.content.res.Configuration
+import android.graphics.Typeface
+import android.os.Bundle
+import android.text.Html
+import android.text.util.Linkify
+import android.util.Log
+import android.util.TypedValue
+import android.view.KeyEvent
+import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
+import android.view.View
+import android.view.ViewGroup
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
+import android.widget.AdapterView
+import android.widget.AdapterView.OnItemClickListener
+import android.widget.AdapterView.OnItemLongClickListener
+import android.widget.ArrayAdapter
+import android.widget.EditText
+import android.widget.ImageView
+import android.widget.ListView
+import android.widget.RelativeLayout
+import android.widget.TextView
+import android.widget.TextView.OnEditorActionListener
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import com.openvehicles.OVMS.R
+import com.openvehicles.OVMS.api.ApiService.Companion.makeMsgCommand
+import com.openvehicles.OVMS.api.OnResultCommandListener
+import com.openvehicles.OVMS.entities.CarData
+import com.openvehicles.OVMS.ui.BaseFragmentActivity.Companion.showForResult
+import com.openvehicles.OVMS.ui.settings.StoredCommandFragment
+import com.openvehicles.OVMS.ui.utils.Ui
+import com.openvehicles.OVMS.ui.utils.Ui.showPinDialog
+import com.openvehicles.OVMS.utils.AppPrefs
+import com.openvehicles.OVMS.utils.CarsStorage.getLastSelectedCarId
+import com.openvehicles.OVMS.utils.NotificationData
+import com.openvehicles.OVMS.utils.OVMSNotifications
+import java.text.SimpleDateFormat
+
+class NotificationsFragment : BaseFragment(), OnItemClickListener, OnItemLongClickListener,
+    OnEditorActionListener, OnResultCommandListener {
+
+    private lateinit var listView: ListView
+    private var itemsAdapter: ItemsAdapter? = null
+    private var notifications: OVMSNotifications? = null
+    private lateinit var cmdInput: EditText
+    private lateinit var appPrefs: AppPrefs
+    private var fontMonospace = false
+    private var filterList = false
+    private var filterInfo = false
+    private var filterAlert = false
+    private var fontSize = 10f
+    private var vehicleId: String? = null
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        // Load prefs:
+        appPrefs = AppPrefs(requireActivity(), "ovms")
+        fontMonospace = appPrefs.getData("notifications_font_monospace") == "on"
+        fontSize = try {
+            appPrefs.getData("notifications_font_size").toFloat()
+        } catch (e: Exception) {
+            10f
+        }
+        filterList = appPrefs.getData("notifications_filter_list") == "on"
+        filterInfo = appPrefs.getData("notifications_filter_info") == "on"
+        filterAlert = appPrefs.getData("notifications_filter_alert") == "on"
+
+        // Create UI:
+        val layout = inflater.inflate(R.layout.fragment_notifications, null) as RelativeLayout
+        listView = layout.findViewById<View>(R.id.listView) as ListView
+        listView.onItemClickListener = this
+        listView.setOnItemLongClickListener(this)
+        cmdInput = layout.findViewById<View>(R.id.cmdInput) as EditText
+        cmdInput.setOnEditorActionListener(this)
+        cmdInput.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize * 1.2f)
+        setHasOptionsMenu(true)
+        return layout
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        inflater.inflate(R.menu.notifications_options, menu)
+        menu.findItem(R.id.mi_chk_monospace).setChecked(fontMonospace)
+        menu.findItem(R.id.mi_chk_filter_list).setChecked(filterList)
+        menu.findItem(R.id.mi_chk_filter_info).setChecked(filterInfo)
+        menu.findItem(R.id.mi_chk_filter_alert).setChecked(filterAlert)
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        // cancel Android system notification:
+        val mNotificationManager =
+            requireActivity().getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        mNotificationManager.cancelAll()
+
+        // update list:
+        vehicleId = getLastSelectedCarId()
+        update()
+    }
+
+    override fun onItemClick(parent: AdapterView<*>, view: View, position: Int, id: Long) {
+        val data = parent.adapter.getItem(position) as NotificationData
+        if (data.Type == NotificationData.TYPE_COMMAND) {
+            // use as history:
+            cmdInput.setText(data.Message)
+            cmdInput.requestFocus()
+            cmdInput.postDelayed({
+                val keyboard =
+                    requireActivity().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                keyboard.showSoftInput(cmdInput, 0)
+            }, 200)
+        } else {
+            // display:
+            Log.d(TAG, "Displaying notification: #$position")
+            val dialog = AlertDialog.Builder(parent.context)
+                .setIcon(data.icon)
+                .setTitle(data.Title)
+                .setMessage(data.messageFormatted)
+                .setCancelable(false)
+                .setPositiveButton(R.string.Close) { dialog, which -> dialog.dismiss() }
+                .show()
+            val textView = dialog.findViewById<View>(android.R.id.message) as TextView?
+            if (textView != null) {
+                if (fontMonospace) {
+                    textView.setTypeface(Typeface.MONOSPACE)
+                }
+                textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize * 1.2f)
+                Linkify.addLinks(textView, Linkify.WEB_URLS)
+            }
+        }
+    }
+
+    override fun onItemLongClick(
+        parent: AdapterView<*>,
+        view: View,
+        position: Int,
+        id: Long
+    ): Boolean {
+        Log.d(TAG, "Long click on notification: #$position")
+
+        // copy message text to clipboard:
+        val data = parent.adapter.getItem(position) as NotificationData
+        val message = data.messageFormatted
+        val clipboard =
+            requireActivity().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("label", message)
+        clipboard.setPrimaryClip(clip)
+        Toast.makeText(
+            context,
+            R.string.notifications_toast_copied,
+            Toast.LENGTH_SHORT
+        ).show()
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        val menuId = item.itemId
+        val newState = !item.isChecked
+        when (menuId) {
+            R.id.mi_help -> {
+                AlertDialog.Builder(requireContext())
+                    .setTitle(R.string.notifications_btn_help)
+                    .setMessage(Html.fromHtml(getString(R.string.notifications_help)))
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show()
+                return true
+            }
+            R.id.mi_chk_filter_list -> {
+                filterList = newState
+                appPrefs.saveData("notifications_filter_list", if (newState) "on" else "off")
+                item.setChecked(newState)
+                initList()
+                return true
+            }
+            R.id.mi_chk_filter_info -> {
+                filterInfo = newState
+                appPrefs.saveData("notifications_filter_info", if (newState) "on" else "off")
+                item.setChecked(newState)
+                return true
+            }
+            R.id.mi_chk_filter_alert -> {
+                filterAlert = newState
+                appPrefs.saveData("notifications_filter_alert", if (newState) "on" else "off")
+                item.setChecked(newState)
+                return true
+            }
+            R.id.mi_chk_monospace -> {
+                fontMonospace = newState
+                appPrefs.saveData("notifications_font_monospace", if (newState) "on" else "off")
+                item.setChecked(newState)
+                itemsAdapter!!.notifyDataSetChanged()
+                return true
+            }
+            R.id.mi_set_fontsize -> {
+                showPinDialog(
+                    requireActivity(),
+                    getString(R.string.notifications_set_fontsize),
+                    fontSize.toString(),
+                    R.string.Set,
+                    false,
+                    object : Ui.OnChangeListener<String?> {
+                        override fun onAction(data: String?) {
+                            val value = try {
+                                data?.toFloat()
+                            } catch (e: Exception) {
+                                10f
+                            }
+                            fontSize = value ?: 10f
+                            appPrefs.saveData("notifications_font_size", fontSize.toString())
+                            itemsAdapter!!.notifyDataSetChanged()
+                            cmdInput.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize * 1.2f)
+                        }
+                    })
+                return true
+            }
+            R.id.mi_stored_commands -> {
+                showForResult(
+                    this, StoredCommandFragment::class.java,
+                    StoredCommandFragment.REQUEST_SELECT_EXECUTE, null,
+                    Configuration.ORIENTATION_UNDEFINED
+                )
+                return false
+            }
+            else -> return super.onOptionsItemSelected(item)
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        var command: String? = null
+        if (data != null) {
+            command = data.getStringExtra("command")
+        }
+        Log.d(TAG, "onActivityResult: reqCode=$requestCode, resCode=$resultCode, command: $command")
+        sendUserCommand(command)
+    }
+
+    fun update() {
+        initList()
+    }
+
+    override fun update(carData: CarData?) {
+        super.update(carData)
+
+        // check if the car filter needs to be reapplied:
+        if (filterList && carData!!.sel_vehicleid != vehicleId) {
+            val vehicleId = getLastSelectedCarId()
+            if (vehicleId != null && vehicleId != this.vehicleId) {
+                Log.d(TAG, "update: vehicle changed to '$vehicleId' => filter reload")
+                this.vehicleId = vehicleId
+                initList()
+            }
+        }
+    }
+
+    private fun initList() {
+        val context = activity
+            ?: return
+        Log.d(TAG, "initUi: (re-)loading notifications, filter=$filterInfo, vehicle=$vehicleId")
+
+        // (re-)load notifications:
+        // TODO: this scheme of recreating the OVMSNotifications object on every change is a PITA,
+        //       it needs to be replaced by a singleton or service
+        notifications = OVMSNotifications(context)
+        val data = notifications!!.getArray(if (filterList) vehicleId else "")
+
+        // attach array to ListView:
+        itemsAdapter = ItemsAdapter(context, this, data)
+        listView.setAdapter(itemsAdapter)
+    }
+
+    // ATTENTION: use this only to display local updates to mNotifications!
+    //            (will not show changes from other OVMSNotifications instances)
+    private fun updateList() {
+        val context = activity
+            ?: return
+        if (notifications == null || itemsAdapter == null) {
+            initList()
+        } else {
+            val data = notifications!!.getArray(if (filterList) vehicleId else "")
+            itemsAdapter = ItemsAdapter(context, this, data)
+            listView.setAdapter(itemsAdapter)
+        }
+    }
+
+    private var lastCommandSent = 0
+    override fun onEditorAction(textView: TextView, actionId: Int, keyEvent: KeyEvent): Boolean {
+        var handled = false
+        if (actionId == EditorInfo.IME_ACTION_SEND) {
+            val userCmd = textView.getText().toString()
+            handled = sendUserCommand(userCmd)
+        }
+        return handled
+    }
+
+    private fun sendUserCommand(userCmd: String?): Boolean {
+        if (userCmd.isNullOrEmpty()) {
+            return false
+        }
+        if (notifications == null) {
+            initList()
+        }
+
+        // Add command to history:
+        val vehicleId = getLastSelectedCarId()
+        notifications!!.addNotification(
+            NotificationData.TYPE_COMMAND, "$vehicleId: $userCmd", userCmd
+        )
+        updateList()
+
+        // Send command:
+        val mpCmd = makeMsgCommand(userCmd)
+        val cp = mpCmd.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+        return try {
+            lastCommandSent = cp[0].toInt()
+            sendCommand(userCmd, mpCmd, this)
+            true
+        } catch (e: Exception) {
+            Toast.makeText(
+                activity,
+                getString(R.string.err_unimplemented_operation),
+                Toast.LENGTH_SHORT
+            ).show()
+            false
+        }
+    }
+
+    override fun onResultCommand(result: Array<String>) {
+        if (result.size <= 1) {
+            return
+        }
+        if (notifications == null) {
+            initList()
+        }
+        val command = result[0].toInt()
+        val cmdMessage = getSentCommandMessage(result[0])
+        val resCode = result[1].toInt()
+        if (command != 7 && command != 41 && command != 49 && command != lastCommandSent) {
+            // not for us
+            return
+        }
+        var cmdOutput: String? = null
+        if (result.size >= 3 && result[2] != null) {
+            cmdOutput = result[2]
+            for (i in 3 until result.size) {
+                cmdOutput += "," + result[i]
+            }
+        }
+        val vehicleId = getLastSelectedCarId()
+        when (resCode) {
+            0 -> {
+                val type =
+                    if (command == 41) NotificationData.TYPE_USSD else NotificationData.TYPE_RESULT_SUCCESS
+                // suppress first (empty) OK result for cmd 41:
+                if (command == 7 || cmdOutput != null) {
+                    cancelCommand()
+                    notifications!!.addNotification(
+                        type,
+                        "$vehicleId: $cmdMessage",
+                        cmdOutput ?: getString(R.string.msg_ok)
+                    )
+                    updateList()
+                }
+            }
+
+            1 -> {
+                cancelCommand()
+                notifications!!.addNotification(
+                    NotificationData.TYPE_RESULT_ERROR,
+                    "$vehicleId: $cmdMessage",
+                    getString(R.string.err_failed_smscmd)
+                )
+                updateList()
+            }
+
+            2 -> {
+                cancelCommand()
+                if (activity != null) {
+                    Toast.makeText(
+                        activity,
+                        cmdMessage + " => " + getString(R.string.err_unsupported_operation),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+
+            3 -> {
+                cancelCommand()
+                if (activity != null) {
+                    Toast.makeText(
+                        activity,
+                        cmdMessage + " => " + getString(R.string.err_unimplemented_operation),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+    }
+
+    /*
+     * Inner types
+     */
+
+    private class ItemsAdapter(
+        context: Context?,
+        private val fragment: NotificationsFragment,
+        items: Array<NotificationData?>?
+    ) : ArrayAdapter<NotificationData?>(context!!, R.layout.item_notifications, items!!) {
+
+        private val inflater: LayoutInflater
+        private val dateFormat = SimpleDateFormat("MMM d, HH:mm")
+
+        init {
+            inflater = LayoutInflater.from(context)
+        }
+
+        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+            var v = convertView
+            if (v == null) {
+                v = inflater.inflate(R.layout.item_notifications, null)
+            }
+            val it = getItem(position)
+            if (it != null) {
+                // set icon according to notification type:
+                val iv = v!!.findViewById<View>(R.id.textNotificationsIcon) as ImageView
+                iv.setImageResource(it.icon)
+
+                // set title, message & timestamp:
+                var tv = v.findViewById<View>(R.id.textNotificationsListTitle) as TextView
+                tv.text = it.Title
+                tv = v.findViewById<View>(R.id.textNotificationsListMessage) as TextView
+                if (fragment.fontMonospace) {
+                    tv.setTypeface(Typeface.MONOSPACE)
+                } else {
+                    tv.setTypeface(Typeface.DEFAULT)
+                }
+                tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, fragment.fontSize)
+                if (it.Type == NotificationData.TYPE_COMMAND) {
+                    tv.visibility = View.GONE // cmd shown in title
+                } else {
+                    tv.visibility = View.VISIBLE
+                    tv.text = it.messageFormatted
+                }
+                tv = v.findViewById<View>(R.id.textNotificationsListTimestamp) as TextView
+                tv.text = dateFormat.format(it.Timestamp)
+            }
+            return v!!
+        }
+    }
+
+    companion object {
+        private const val TAG = "NotificationsFragment"
+    }
 }
